@@ -21,6 +21,10 @@ import {
   stateToProps,
 } from "./timeline/experienceState.js";
 import { resolveTimelineState } from "./timeline/interpolateExperienceState.js";
+import {
+  normalizeScrollSections,
+  timelineTimeForSectionProgress,
+} from "./timeline/scrollSections.js";
 
 function downloadJson(filename, data) {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -173,12 +177,28 @@ function App() {
 
       gsap.registerPlugin(ScrollTrigger);
       context = gsap.context(() => {
-        ScrollTrigger.create({
-          trigger: ".authoring-scroll-sim",
-          start: "top top",
-          end: "bottom bottom",
-          scrub: true,
-          onUpdate: (self) => setTimelineTime(self.progress * durationSeconds),
+        const sections = normalizeScrollSections(timelineConfig.scroll.sections, durationSeconds);
+        if (!sections.length) {
+          ScrollTrigger.create({
+            trigger: ".authoring-scroll-sim",
+            start: "top top",
+            end: "bottom bottom",
+            scrub: true,
+            onUpdate: (self) => setTimelineTime(self.progress * durationSeconds),
+          });
+          return;
+        }
+
+        sections.forEach((section) => {
+          const trigger = document.querySelector(`[data-therma-authoring-section="${section.id}"]`);
+          if (!trigger) return;
+          ScrollTrigger.create({
+            trigger,
+            start: "top bottom",
+            end: "bottom top",
+            scrub: true,
+            onUpdate: (self) => setTimelineTime(timelineTimeForSectionProgress(section, self.progress)),
+          });
         });
       });
       ScrollTrigger.refresh();
@@ -277,8 +297,13 @@ function App() {
       </section>
       {scrollSimulationEnabled && (
         <div className="authoring-scroll-sim" aria-hidden="true">
-          {Array.from({ length: timelineConfig.scroll.sectionCount }, (_, index) => (
-            <section className="authoring-scroll-section" key={index} />
+          {normalizeScrollSections(timelineConfig.scroll.sections, durationSeconds).map((section) => (
+            <section
+              className="authoring-scroll-section"
+              data-therma-authoring-section={section.id}
+              key={section.id}
+              style={{ height: `${section.heightVh}vh` }}
+            />
           ))}
         </div>
       )}

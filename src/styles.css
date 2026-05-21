@@ -59,7 +59,6 @@ button {
 .authoring-scroll-sim {
   position: relative;
   z-index: 1;
-  min-height: 900vh;
   pointer-events: none;
 }
 

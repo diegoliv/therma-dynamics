@@ -4,6 +4,11 @@ import { Viewer } from "./scene/Viewer.jsx";
 import { createDefaultTimelineConfig, normalizeTimelineConfig } from "./timeline/defaultTimelineConfig.js";
 import { stateToProps } from "./timeline/experienceState.js";
 import { resolveTimelineState } from "./timeline/interpolateExperienceState.js";
+import {
+  clampTime,
+  normalizeScrollSections,
+  timelineTimeForSectionProgress,
+} from "./timeline/scrollSections.js";
 
 const EMBED_VERSION = "2026-05-21.2";
 
@@ -56,6 +61,32 @@ function resolveAssetUrl(url, publicPath) {
   return new URL(url.replace(/^\//, ""), publicPath.endsWith("/") ? publicPath : `${publicPath}/`).toString();
 }
 
+function getSectionElements(scrollConfig, durationSeconds) {
+  const sectionSelector = scrollConfig.sectionSelector || ".therma-scroll-section";
+  const domSections = Array.from(document.querySelectorAll(sectionSelector));
+  const configSections = normalizeScrollSections(scrollConfig.sections, durationSeconds);
+
+  if (domSections.length) {
+    return domSections.map((element, index) => {
+      const configuredSection = configSections[index];
+      const from = element.dataset.thermaFrom ?? configuredSection?.from ?? 0;
+      const to = element.dataset.thermaTo ?? configuredSection?.to ?? durationSeconds;
+      return {
+        element,
+        from: clampTime(from, durationSeconds),
+        to: clampTime(to, durationSeconds),
+      };
+    }).filter((section) => section.from !== section.to);
+  }
+
+  return configSections
+    .map((section) => ({
+      ...section,
+      element: section.selector ? document.querySelector(section.selector) : null,
+    }))
+    .filter((section) => section.element && section.from !== section.to);
+}
+
 function setupScrollTrigger({ config, options, setTime, durationSeconds }) {
   const gsap = window.gsap;
   const ScrollTrigger = window.ScrollTrigger || gsap?.ScrollTrigger;
@@ -70,8 +101,26 @@ function setupScrollTrigger({ config, options, setTime, durationSeconds }) {
     ...(config.scroll ?? {}),
     ...(options.scrollTrigger ?? {}),
   };
-  const trigger = scrollConfig.trigger || scrollConfig.triggerSelector || ".therma-scroll-page";
+  const sectionTriggers = getSectionElements(scrollConfig, durationSeconds);
 
+  if (sectionTriggers.length) {
+    const triggers = sectionTriggers.map((section) => ScrollTrigger.create({
+      trigger: section.element,
+      start: scrollConfig.sectionStart || scrollConfig.start || "top bottom",
+      end: scrollConfig.sectionEnd || scrollConfig.end || "bottom top",
+      scrub: scrollConfig.scrub ?? true,
+      invalidateOnRefresh: true,
+      onUpdate: (self) => setTime(timelineTimeForSectionProgress(section, self.progress)),
+    }));
+
+    return {
+      kill() {
+        triggers.forEach((trigger) => trigger.kill());
+      },
+    };
+  }
+
+  const trigger = scrollConfig.trigger || scrollConfig.triggerSelector || ".therma-scroll-page";
   return ScrollTrigger.create({
     trigger,
     start: scrollConfig.start || "top top",

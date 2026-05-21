@@ -16,7 +16,7 @@ Open the local URL printed by Vite, usually `http://127.0.0.1:5173/`.
 The default dev app is the authoring version. It keeps the GUI, exposes the
 timeline in seconds from `0` to `9`, can capture/update/delete timeline states,
 exports the timeline JSON, and includes a scroll simulation mode with nine
-`100vh` sections.
+timeline-mapped sections.
 
 ```bash
 npm run build:authoring
@@ -33,17 +33,16 @@ Expected Webflow structure:
   <div class="therma-sticky-stage">
     <div id="therma-dynamics-host"></div>
   </div>
-  <section class="therma-scroll-section"></section>
-  <section class="therma-scroll-section"></section>
-  <section class="therma-scroll-section"></section>
-  <section class="therma-scroll-section"></section>
-  <section class="therma-scroll-section"></section>
-  <section class="therma-scroll-section"></section>
-  <section class="therma-scroll-section"></section>
-  <section class="therma-scroll-section"></section>
-  <section class="therma-scroll-section"></section>
+  <section class="therma-scroll-section is-short" data-therma-from="0" data-therma-to="1.5"></section>
+  <section class="therma-scroll-section is-long" data-therma-from="1.5" data-therma-to="4"></section>
+  <section class="therma-scroll-section is-medium" data-therma-from="4" data-therma-to="6"></section>
+  <section class="therma-scroll-section is-long" data-therma-from="6" data-therma-to="9"></section>
 </div>
 ```
+
+Each `.therma-scroll-section` controls its own timeline interval through
+`data-therma-from` and `data-therma-to`. Taller Webflow sections make that
+interval play more slowly.
 
 Expected Webflow mount call, after GSAP and ScrollTrigger are loaded:
 
@@ -54,9 +53,7 @@ Expected Webflow mount call, after GSAP and ScrollTrigger are loaded:
     configUrl: "https://your-cdn.example/therma-dynamics-timeline.json",
     publicPath: "https://your-cdn.example/",
     scrollTrigger: {
-      trigger: ".therma-scroll-page",
-      start: "top top",
-      end: "bottom bottom",
+      sectionSelector: ".therma-scroll-section",
       scrub: true
     }
   });

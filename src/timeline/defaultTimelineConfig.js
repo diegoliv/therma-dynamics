@@ -1,5 +1,6 @@
 import { MODEL_URL } from "../app/config.js";
 import { createDefaultExperienceState, deepMerge } from "./experienceState.js";
+import { createDefaultScrollSections } from "./scrollSections.js";
 
 export const DEFAULT_TIMELINE_DURATION_SECONDS = 9;
 export const DEFAULT_SCROLL_SECTION_COUNT = 9;
@@ -13,10 +14,10 @@ export function createDefaultTimelineConfig() {
       modelUrl: MODEL_URL,
     },
     scroll: {
-      sectionCount: DEFAULT_SCROLL_SECTION_COUNT,
       scrub: true,
       triggerSelector: ".therma-scroll-page",
       sectionSelector: ".therma-scroll-section",
+      sections: createDefaultScrollSections(DEFAULT_TIMELINE_DURATION_SECONDS),
     },
     defaults: createDefaultExperienceState(),
     keyframes: [
