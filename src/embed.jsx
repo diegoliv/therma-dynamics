@@ -81,12 +81,18 @@ function setupScrollTrigger({ config, options, setTime, durationSeconds }) {
 }
 
 export function mount(options = {}) {
-  const container = typeof options.container === "string"
+  let container = typeof options.container === "string"
     ? document.querySelector(options.container)
     : options.container;
 
   if (!container) {
     throw new Error("ThermaDynamics.mount requires a valid container.");
+  }
+
+  if (container === document.body) {
+    container = document.createElement("div");
+    container.className = "therma-dynamics-root";
+    document.body.appendChild(container);
   }
 
   const root = createRoot(container);

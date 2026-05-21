@@ -1,10 +1,13 @@
 import { Suspense, useEffect, useRef, useState } from "react";
-import { createRoot } from "@react-three/fiber";
+import { createRoot, extend } from "@react-three/fiber";
+import * as THREE from "three";
 import { DEFAULT_GLOBAL_LIGHT_SETTINGS, MODEL_URL } from "../app/config.js";
 import { BokehDepthOfField } from "./BokehDepthOfField.jsx";
 import { EnvironmentSetup } from "./EnvironmentSetup.jsx";
 import { Model } from "./Model.jsx";
 import { RendererSettings } from "./RendererSettings.jsx";
+
+extend(THREE);
 
 function SceneContent({
   orbitEnabled,
