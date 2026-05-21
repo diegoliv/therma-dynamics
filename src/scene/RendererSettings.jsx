@@ -11,6 +11,7 @@ export function RendererSettings() {
     gl.outputColorSpace = THREE.SRGBColorSpace;
     gl.toneMapping = THREE.ACESFilmicToneMapping;
     gl.toneMappingExposure = 1;
+    gl.setClearColor(0x000000, 0);
   }, [gl]);
 
   return null;

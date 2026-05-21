@@ -23,11 +23,10 @@ export function Viewer({
     <Canvas
       camera={{ position: [2, 1.2, 4], fov: 38 }}
       dpr={[1, 2]}
-      gl={{ antialias: true, alpha: false, preserveDrawingBuffer: true }}
+      gl={{ antialias: true, alpha: true, preserveDrawingBuffer: true }}
       shadows
     >
       <RendererSettings />
-      <color attach="background" args={[backgroundColor]} />
       <ambientLight
         color={DEFAULT_GLOBAL_LIGHT_SETTINGS.ambientColor}
         intensity={DEFAULT_GLOBAL_LIGHT_SETTINGS.ambientIntensity}

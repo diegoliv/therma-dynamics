@@ -143,6 +143,13 @@ function App() {
   }, [applyExperienceState, timelineConfig, timelineTime]);
 
   useEffect(() => {
+    document.body.style.backgroundColor = backgroundColor;
+    return () => {
+      document.body.style.backgroundColor = "";
+    };
+  }, [backgroundColor]);
+
+  useEffect(() => {
     document.documentElement.classList.toggle("is-therma-scroll-sim", scrollSimulationEnabled);
     document.body.classList.toggle("is-therma-scroll-sim", scrollSimulationEnabled);
     return () => {
