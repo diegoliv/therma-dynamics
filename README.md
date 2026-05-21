@@ -34,7 +34,7 @@ Expected Webflow structure:
     <div id="therma-dynamics-host"></div>
   </div>
   <section class="therma-scroll-section is-short" data-therma-from="0" data-therma-to="1.5"></section>
-  <section class="therma-scroll-section is-long" data-therma-from="1.5" data-therma-to="4"></section>
+  <section class="therma-scroll-section is-long" data-therma-from="1.5" data-therma-to="4" data-therma-start="top center" data-therma-end="bottom top"></section>
   <section class="therma-scroll-section is-medium" data-therma-from="4" data-therma-to="6"></section>
   <section class="therma-scroll-section is-long" data-therma-from="6" data-therma-to="9"></section>
 </div>
@@ -44,7 +44,8 @@ Each `.therma-scroll-section` controls its own timeline interval through
 `data-therma-from` and `data-therma-to`. Taller Webflow sections make that
 interval play more slowly. By default, a section maps its interval from
 `top top` to `bottom top`, so a `100vh` section interpolates over `100vh` of
-scroll and a `200vh` section interpolates over `200vh`.
+scroll and a `200vh` section interpolates over `200vh`. Per-section trigger
+positions can be overridden with `data-therma-start` and `data-therma-end`.
 
 Expected Webflow mount call, after GSAP and ScrollTrigger are loaded:
 

@@ -73,6 +73,8 @@ function getSectionElements(scrollConfig, durationSeconds) {
       const to = element.dataset.thermaTo ?? configuredSection?.to ?? durationSeconds;
       return {
         element,
+        start: element.dataset.thermaStart ?? configuredSection?.start,
+        end: element.dataset.thermaEnd ?? configuredSection?.end,
         from: clampTime(from, durationSeconds),
         to: clampTime(to, durationSeconds),
       };
@@ -106,8 +108,8 @@ function setupScrollTrigger({ config, options, setTime, durationSeconds }) {
   if (sectionTriggers.length) {
     const triggers = sectionTriggers.map((section) => ScrollTrigger.create({
       trigger: section.element,
-      start: scrollConfig.sectionStart || scrollConfig.start || "top top",
-      end: scrollConfig.sectionEnd || scrollConfig.end || "bottom top",
+      start: section.start || scrollConfig.sectionStart || scrollConfig.start || "top top",
+      end: section.end || scrollConfig.sectionEnd || scrollConfig.end || "bottom top",
       scrub: scrollConfig.scrub ?? true,
       markers: scrollConfig.markers ?? false,
       invalidateOnRefresh: true,

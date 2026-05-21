@@ -19,6 +19,8 @@ export function normalizeScrollSections(sections, durationSeconds) {
       id: section.id || `section-${index + 1}`,
       selector: section.selector,
       heightVh: Number(section.heightVh) || 100,
+      start: section.start,
+      end: section.end,
       from: clampTime(section.from, durationSeconds),
       to: clampTime(section.to, durationSeconds),
     }))
