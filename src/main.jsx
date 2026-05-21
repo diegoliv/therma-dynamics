@@ -5,21 +5,61 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
+import { BokehPass } from "three/examples/jsm/postprocessing/BokehPass.js";
+import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import GUI from "lil-gui";
 import "./styles.css";
 
 const MODEL_URL = "/models/therma_dynamics_v2.glb";
-const DEFAULT_THERMAL_STATE = 0.72;
-const DEFAULT_GRADIENT_SOFTNESS = 0.42;
-const DEFAULT_THERMAL_RADIUS = 1;
-const DEFAULT_HEAT_GRADIENT = ["#16045b", "#b21a71", "#ff6b17", "#fff24a"];
-const DEFAULT_COLD_GRADIENT = ["#000958", "#004ee8", "#00b8f5", "#b8fff4"];
+const THERMAL_PRESETS = {
+  industrialRainbow: {
+    state: 0.84,
+    gradientSoftness: 0.24,
+    radius: 1,
+    contrast: 1.52,
+    noise: 0.095,
+    hotEdge: 0.48,
+    heatColors: ["#00105c", "#00d8ff", "#a7ff00", "#ff1600"],
+    coldColors: ["#000000", "#00084c", "#0026b8", "#00a8ff"],
+  },
+  datacenterMagma: {
+    state: 0.9,
+    gradientSoftness: 0.32,
+    radius: 1.08,
+    contrast: 1.34,
+    noise: 0.06,
+    hotEdge: 0.28,
+    heatColors: ["#12006f", "#c000ff", "#ff2464", "#fff233"],
+    coldColors: ["#020016", "#11006e", "#2d17d9", "#ff00b8"],
+  },
+};
+const DEFAULT_THERMAL_PRESET = THERMAL_PRESETS.industrialRainbow;
+const DEFAULT_GRADIENT_SOFTNESS = DEFAULT_THERMAL_PRESET.gradientSoftness;
+const DEFAULT_THERMAL_RADIUS = DEFAULT_THERMAL_PRESET.radius;
+const DEFAULT_THERMAL_CONTRAST = DEFAULT_THERMAL_PRESET.contrast;
+const DEFAULT_THERMAL_NOISE = DEFAULT_THERMAL_PRESET.noise;
+const DEFAULT_THERMAL_HOT_EDGE = DEFAULT_THERMAL_PRESET.hotEdge;
+const DEFAULT_THERMAL_RADIANCE = 0.16;
+const DEFAULT_HEAT_GRADIENT = DEFAULT_THERMAL_PRESET.heatColors;
+const DEFAULT_COLD_GRADIENT = DEFAULT_THERMAL_PRESET.coldColors;
 const DEFAULT_COOLING_COLOR = "#65d7ff";
 const DEFAULT_COOLING_VISIBILITY = 1;
 const DEFAULT_COOLING_ROUGHNESS = 0.16;
 const DEFAULT_GLASS_COLOR = "#c8f8ff";
 const DEFAULT_GLASS_OPACITY = 0.06;
 const DEFAULT_GLOBAL_MASK_SOFTNESS = 0.14;
+const DEFAULT_HEAT_FALLOFF = 1.25;
+const DEFAULT_FLOOR_DOT_SIZE = 0.025;
+const DEFAULT_FLOOR_DOT_SPACING = 0.22;
+const DEFAULT_FLOOR_DOT_OPACITY = 0.35;
+const DEFAULT_BACKGROUND_COLOR = "#080b0f";
+const DEFAULT_DOF_SETTINGS = {
+  enabled: false,
+  focus: 40,
+  aperture: 0.018,
+  maxblur: 0.012,
+};
 const USE_COOLING_SHADER_FOR_THERMAL_TEST = false;
 const DEFAULT_CAMERA_NEAR = 0.01;
 const DEFAULT_CAMERA_FAR = 2000;
@@ -68,8 +108,13 @@ const thermalFragmentShader = `
   uniform float uEdgeSoftness;
   uniform float uThermalRadius;
   uniform float uCoreStrength;
+  uniform float uThermalContrast;
+  uniform float uThermalNoise;
+  uniform float uHotEdge;
+  uniform float uThermalRadiance;
   uniform float uGlobalOpacity;
   uniform float uGlobalMaskSoftness;
+  uniform float uHeatFalloff;
   uniform vec3 uBaseColor;
   uniform vec3 uBoxCenter;
   uniform vec3 uBoxHalfSize;
@@ -134,6 +179,19 @@ const thermalFragmentShader = `
     return color;
   }
 
+  float thermalResponse(float t, vec3 noisePosition) {
+    float broadNoise = valueNoise(noisePosition * 8.0 + vec3(0.0, uTime * 0.05, 0.0));
+    float fineNoise = hash(floor(noisePosition * 145.0 + uTime * 3.0));
+    float sensorNoise = (broadNoise - 0.5) * uThermalNoise + (fineNoise - 0.5) * uThermalNoise * 0.58;
+    t = clamp(t + sensorNoise, 0.0, 1.0);
+    t = clamp((t - 0.5) * uThermalContrast + 0.5, 0.0, 1.0);
+    t = pow(t, mix(1.16, 0.72, uThermalState));
+
+    float bands = 28.0;
+    float banded = floor(t * bands) / bands;
+    return mix(t, banded, 0.16);
+  }
+
   vec2 faceCoordinates(vec3 localPosition, vec3 localNormal) {
     vec3 halfSize = max(uBoxHalfSize, vec3(0.0001));
     vec3 p = clamp((localPosition - uBoxCenter) / halfSize, vec3(-1.0), vec3(1.0));
@@ -187,7 +245,12 @@ const thermalFragmentShader = `
     float edgeMask = edgeProximity(faceUv);
     float faceCore = blurredInsetThermalMap(faceUv);
     float internalPulse = 0.045 * sin(uTime * 1.4 + vObjectPosition.x * 2.2 + vObjectPosition.y * 1.7);
-    float thermalAmount = clamp(faceCore + internalPulse * faceCore, 0.0, 1.0);
+    float surfaceNoise = valueNoise(vWorldPosition * 3.35 + vec3(1.7, uTime * 0.025, 4.2));
+    float speckle = hash(floor(vWorldPosition * 78.0));
+    float edgeHeat = edgeMask * uHotEdge * (0.34 + uThermalState * 0.66);
+    float thermalAmount = clamp(faceCore + internalPulse * faceCore + edgeHeat, 0.0, 1.0);
+    thermalAmount = clamp(thermalAmount + (surfaceNoise - 0.5) * 0.13 + (speckle - 0.5) * 0.035, 0.0, 1.0);
+    thermalAmount = thermalResponse(thermalAmount, vWorldPosition);
     float centerHeat = pow(thermalAmount, 0.45);
     float centerCold = pow(thermalAmount, 0.58);
     vec3 thermalColor = mix(sampleCold(centerCold), sampleHeat(centerHeat), uThermalState);
@@ -199,9 +262,13 @@ const thermalFragmentShader = `
 
     float coreMix = thermalAmount * uCoreStrength;
     vec3 color = mix(edgeColor, thermalColor, coreMix);
-    color += thermalColor * thermalAmount * 0.18;
-    color += mix(uColdColors[2], uHeatColors[2], uThermalState) * fresnel * 0.18;
-    color = pow(color, vec3(0.9));
+    color += thermalColor * thermalAmount * 0.28;
+    color += sampleHeat(0.86) * edgeMask * thermalAmount * uHotEdge * 0.36;
+    color += mix(uColdColors[2], uHeatColors[2], uThermalState) * fresnel * 0.22;
+    float hotRadiance = smoothstep(0.58, 1.0, thermalAmount);
+    color += thermalColor * hotRadiance * uThermalRadiance;
+    color += sampleHeat(1.0) * edgeMask * hotRadiance * uThermalRadiance * 0.55;
+    color = pow(color, vec3(0.82));
 
     gl_FragColor = vec4(color, 1.0);
   }
@@ -305,6 +372,37 @@ const coolingFragmentShader = `
   }
 `;
 
+const floorVertexShader = `
+  varying vec3 vWorldPosition;
+
+  void main() {
+    vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+    vWorldPosition = worldPosition.xyz;
+    gl_Position = projectionMatrix * viewMatrix * worldPosition;
+  }
+`;
+
+const floorFragmentShader = `
+  varying vec3 vWorldPosition;
+
+  uniform float uDotSize;
+  uniform float uDotSpacing;
+  uniform float uDotOpacity;
+  uniform vec3 uDotColor;
+
+  void main() {
+    float spacing = max(uDotSpacing, 0.001);
+    vec2 cell = fract(vWorldPosition.xz / spacing) - 0.5;
+    float distanceToCenter = length(cell) * spacing;
+    float radius = clamp(uDotSize, 0.0001, spacing * 0.48);
+    float edge = max(radius * 0.28, 0.001);
+    float dot = 1.0 - smoothstep(radius - edge, radius, distanceToCenter);
+    float alpha = dot * clamp(uDotOpacity, 0.0, 1.0);
+    if (alpha <= 0.001) discard;
+    gl_FragColor = vec4(uDotColor, alpha);
+  }
+`;
+
 function formatBytes(bytes) {
   if (!Number.isFinite(bytes)) return "-";
   if (bytes < 1024) return `${bytes} B`;
@@ -393,16 +491,16 @@ function EnvironmentSetup() {
   return null;
 }
 
-function RendererSettings({ lightingEnabled }) {
+function RendererSettings() {
   const { gl } = useThree();
 
   useEffect(() => {
-    gl.shadowMap.enabled = lightingEnabled;
+    gl.shadowMap.enabled = true;
     gl.shadowMap.type = THREE.PCFSoftShadowMap;
     gl.outputColorSpace = THREE.SRGBColorSpace;
     gl.toneMapping = THREE.ACESFilmicToneMapping;
     gl.toneMappingExposure = 1;
-  }, [gl, lightingEnabled]);
+  }, [gl]);
 
   return null;
 }
@@ -445,6 +543,59 @@ function Controls({ target, enabled }) {
     }
     controlsRef.current.update();
   });
+
+  return null;
+}
+
+function BokehDepthOfField({ settings }) {
+  const { gl, scene, camera, size } = useThree();
+  const composerRef = useRef();
+  const bokehPassRef = useRef();
+
+  useEffect(() => {
+    const composer = new EffectComposer(gl);
+    const renderPass = new RenderPass(scene, camera);
+    const bokehPass = new BokehPass(scene, camera, {
+      focus: settings.focus,
+      aperture: settings.aperture,
+      maxblur: settings.maxblur,
+    });
+
+    composer.addPass(renderPass);
+    composer.addPass(bokehPass);
+    composerRef.current = composer;
+    bokehPassRef.current = bokehPass;
+
+    return () => {
+      composer.dispose();
+      bokehPass.dispose();
+      composerRef.current = null;
+      bokehPassRef.current = null;
+    };
+  }, [camera, gl, scene]);
+
+  useEffect(() => {
+    const pixelRatio = gl.getPixelRatio();
+    const width = Math.max(1, Math.floor(size.width * pixelRatio));
+    const height = Math.max(1, Math.floor(size.height * pixelRatio));
+    composerRef.current?.setSize(width, height);
+    bokehPassRef.current?.setSize(width, height);
+  }, [gl, size.height, size.width]);
+
+  useFrame(() => {
+    const composer = composerRef.current;
+    const bokehPass = bokehPassRef.current;
+    if (!settings.enabled || !composer || !bokehPass) {
+      gl.setRenderTarget(null);
+      gl.render(scene, camera);
+      return;
+    }
+
+    bokehPass.uniforms.focus.value = settings.focus;
+    bokehPass.uniforms.aperture.value = settings.aperture;
+    bokehPass.uniforms.maxblur.value = settings.maxblur;
+    composer.render();
+  }, 1);
 
   return null;
 }
@@ -502,9 +653,53 @@ function isCoolingMaterial(material) {
   return material?.name?.toLowerCase().includes("cooling");
 }
 
+function isFloorMaterial(material) {
+  if (Array.isArray(material)) {
+    return material.some((entry) => entry?.name?.toLowerCase().includes("floor"));
+  }
+  return material?.name?.toLowerCase().includes("floor");
+}
+
 function isCoolingObject(node) {
   const name = node.name?.toLowerCase() ?? "";
   return name.includes("cooling_plate") || name.includes("coolant");
+}
+
+function isHeatObject(node) {
+  const name = node.name?.toLowerCase() ?? "";
+  return name === "heat" || name.startsWith("heat.");
+}
+
+function getRackInfluenceNode(node) {
+  let cursor = node;
+  let rackNode = null;
+
+  while (cursor) {
+    const name = cursor.name?.toLowerCase() ?? "";
+    if (/^rack(?:\.|$)/.test(name)) rackNode = cursor;
+    cursor = cursor.parent;
+  }
+
+  return rackNode ?? node;
+}
+
+function heatInfluenceAtPoint(point, heatCenter, heatHalfSize, heatFalloff) {
+  const qx = Math.abs(point.x - heatCenter.x) - heatHalfSize.x;
+  const qy = Math.abs(point.y - heatCenter.y) - heatHalfSize.y;
+  const qz = Math.abs(point.z - heatCenter.z) - heatHalfSize.z;
+  const outsideX = Math.max(qx, 0);
+  const outsideY = Math.max(qy, 0);
+  const outsideZ = Math.max(qz, 0);
+  const outsideDistance = Math.sqrt(
+    outsideX * outsideX + outsideY * outsideY + outsideZ * outsideZ,
+  );
+  const inside = Math.max(qx, qy, qz) <= 0;
+  if (inside) return 1;
+
+  const falloff = Math.max(heatFalloff, 0.0001);
+  const t = THREE.MathUtils.clamp(outsideDistance / falloff, 0, 1);
+  const smooth = t * t * (3 - 2 * t);
+  return 1 - smooth;
 }
 
 function sourceByName(material, name) {
@@ -664,6 +859,41 @@ function createCoolingMaterial(sourceMaterial) {
   return material;
 }
 
+function createFloorMaterial(sourceMaterial) {
+  const material = new THREE.ShaderMaterial({
+    name: `${sourceMaterial?.name || "floor"}_dot_shader`,
+    vertexShader: floorVertexShader,
+    fragmentShader: floorFragmentShader,
+    uniforms: {
+      uDotSize: { value: DEFAULT_FLOOR_DOT_SIZE },
+      uDotSpacing: { value: DEFAULT_FLOOR_DOT_SPACING },
+      uDotOpacity: { value: DEFAULT_FLOOR_DOT_OPACITY },
+      uDotColor: { value: new THREE.Color("#ffffff") },
+    },
+    transparent: true,
+    depthWrite: false,
+    depthTest: true,
+    side: THREE.DoubleSide,
+  });
+  material.userData.isFloorPreview = true;
+  material.userData.baseOpacity = 1;
+  material.userData.baseTransparent = true;
+  return material;
+}
+
+function createInvisibleHeatMaterial(sourceMaterial) {
+  const material = new THREE.MeshBasicMaterial({
+    name: `${sourceMaterial?.name || "heat"}_invisible_driver`,
+    transparent: true,
+    opacity: 0,
+    depthWrite: false,
+    depthTest: false,
+    colorWrite: false,
+  });
+  material.userData.isHeatDriver = true;
+  return material;
+}
+
 function createThermalTestMaterial(sourceMaterial) {
   const sourceColor = sourceMaterial?.color?.isColor
     ? sourceMaterial.color.clone()
@@ -703,12 +933,17 @@ function createThermalMaterial(sourceMaterial, geometry) {
     fragmentShader: thermalFragmentShader,
     uniforms: {
       uTime: { value: 0 },
-      uThermalState: { value: DEFAULT_THERMAL_STATE },
+      uThermalState: { value: 0 },
       uEdgeSoftness: { value: DEFAULT_GRADIENT_SOFTNESS },
       uThermalRadius: { value: DEFAULT_THERMAL_RADIUS },
       uCoreStrength: { value: 0.92 },
+      uThermalContrast: { value: DEFAULT_THERMAL_CONTRAST },
+      uThermalNoise: { value: DEFAULT_THERMAL_NOISE },
+      uHotEdge: { value: DEFAULT_THERMAL_HOT_EDGE },
+      uThermalRadiance: { value: DEFAULT_THERMAL_RADIANCE },
       uGlobalOpacity: { value: 1 },
       uGlobalMaskSoftness: { value: DEFAULT_GLOBAL_MASK_SOFTNESS },
+      uHeatFalloff: { value: DEFAULT_HEAT_FALLOFF },
       uBaseColor: { value: getMaterialBaseColor(sourceMaterial) },
       uBoxCenter: { value: box.getCenter(new THREE.Vector3()) },
       uBoxHalfSize: { value: box.getSize(new THREE.Vector3()).multiplyScalar(0.5) },
@@ -725,16 +960,12 @@ function createThermalMaterial(sourceMaterial, geometry) {
 }
 
 function Model({
-  mode,
-  showBounds,
-  autoRotate,
   orbitEnabled,
   thermalSettings,
   coolingSettings,
   glassSettings,
+  floorSettings,
   globalOpacitySettings,
-  cameraSettings,
-  lightingEnabled,
   animationProgress,
   onStats,
 }) {
@@ -745,7 +976,16 @@ function Model({
   const thermalMaterialsRef = useRef([]);
   const coolingMaterialsRef = useRef([]);
   const glassMaterialsRef = useRef([]);
+  const floorMaterialsRef = useRef([]);
   const opacityMaterialsRef = useRef([]);
+  const heatObjectRef = useRef();
+  const heatBoundsRef = useRef({
+    box: new THREE.Box3(),
+    center: new THREE.Vector3(),
+    halfSize: new THREE.Vector3(0.0001, 0.0001, 0.0001),
+    sampleBox: new THREE.Box3(),
+    sampleCenter: new THREE.Vector3(),
+  });
   const mixerRef = useRef();
   const actionsRef = useRef([]);
   const animationDurationRef = useRef(1);
@@ -757,7 +997,9 @@ function Model({
     thermalMaterialsRef.current = [];
     coolingMaterialsRef.current = [];
     glassMaterialsRef.current = [];
+    floorMaterialsRef.current = [];
     opacityMaterialsRef.current = [];
+    heatObjectRef.current = null;
     sourceCameraRef.current = null;
     const clayMaterial = new THREE.MeshStandardMaterial({
       color: "#dde6ea",
@@ -790,13 +1032,27 @@ function Model({
       const originalMaterial = node.material;
       const opacityBucket = getOpacityBucket(node);
       let materialForPreview = originalMaterial;
-      if (isThermalMaterial(originalMaterial)) {
+      if (isHeatObject(node)) {
+        const sourceMaterial = isThermalMaterial(originalMaterial)
+          ? sourceByName(originalMaterial, "heat")
+          : originalMaterial;
+        materialForPreview = createInvisibleHeatMaterial(sourceMaterial);
+        heatObjectRef.current = node;
+        node.renderOrder = -1;
+      } else if (isFloorMaterial(originalMaterial)) {
+        const sourceMaterial = sourceByName(originalMaterial, "floor");
+        materialForPreview = createFloorMaterial(sourceMaterial);
+        materialForPreview.userData.opacityBucket = opacityBucket;
+        node.renderOrder = 0;
+        floorMaterialsRef.current.push(materialForPreview);
+      } else if (isThermalMaterial(originalMaterial)) {
         const sourceMaterial = sourceByName(originalMaterial, "thermal");
         materialForPreview = USE_COOLING_SHADER_FOR_THERMAL_TEST
           ? createThermalTestMaterial(sourceMaterial)
           : createThermalMaterial(sourceMaterial, node.geometry);
         materialForPreview.userData.opacityBucket = opacityBucket;
         materialForPreview.userData.renderNode = node;
+        materialForPreview.userData.heatInfluenceNode = getRackInfluenceNode(node);
         node.renderOrder = 1;
         if (USE_COOLING_SHADER_FOR_THERMAL_TEST) {
           opacityMaterialsRef.current.push(materialForPreview);
@@ -825,6 +1081,7 @@ function Model({
         if (materialForPreview) opacityMaterialsRef.current.push(materialForPreview);
       }
 
+      node.material = materialForPreview;
       node.userData.originalMaterial = materialForPreview;
       node.userData.previewMaterials = {
         clay: node.isInstancedMesh ? instanceHighlightMaterial : clayMaterial,
@@ -853,27 +1110,12 @@ function Model({
   }, [onStats, stats]);
 
   useEffect(() => {
-    scene.traverse((node) => {
-      if (!node.isMesh && !node.isInstancedMesh) return;
-      if (mode === "materials") {
-        node.material = node.userData.originalMaterial;
-      } else {
-        node.material = node.userData.previewMaterials[mode];
-      }
-    });
-  }, [mode, scene]);
-
-  useEffect(() => {
     if (!groupRef.current) return;
     if (sourceCameraRef.current) return;
     fitCameraToObject(camera, groupRef.current, boundsRef);
   }, [camera, scene]);
 
   useFrame((_, delta) => {
-    if (autoRotate && groupRef.current) {
-      groupRef.current.rotation.y += delta * 0.22;
-    }
-
     const globalAnimationTime = animationProgress >= 1
       ? animationDurationRef.current - 0.0001
       : animationDurationRef.current * animationProgress;
@@ -889,8 +1131,8 @@ function Model({
       sourceCameraRef.current.updateMatrixWorld(true);
       sourceCameraRef.current.matrixWorld.decompose(camera.position, camera.quaternion, new THREE.Vector3());
       camera.fov = sourceCameraRef.current.fov;
-      camera.near = cameraSettings.near;
-      camera.far = cameraSettings.far;
+      camera.near = DEFAULT_CAMERA_NEAR;
+      camera.far = DEFAULT_CAMERA_FAR;
       camera.updateProjectionMatrix();
     }
 
@@ -900,14 +1142,45 @@ function Model({
       return 1;
     };
 
+    const heatBounds = heatBoundsRef.current;
+    if (heatObjectRef.current) {
+      heatObjectRef.current.updateMatrixWorld(true);
+      heatBounds.box.setFromObject(heatObjectRef.current);
+      if (!heatBounds.box.isEmpty()) {
+        heatBounds.box.getCenter(heatBounds.center);
+        heatBounds.box.getSize(heatBounds.halfSize).multiplyScalar(0.5);
+        heatBounds.halfSize.max(new THREE.Vector3(0.0001, 0.0001, 0.0001));
+      }
+    }
+
     thermalMaterialsRef.current.forEach((material) => {
       const visibility = displayOpacityFromControl(getOpacityMultiplier(material.userData.opacityBucket));
       material.uniforms.uTime.value += delta;
-      material.uniforms.uThermalState.value = thermalSettings.state;
       material.uniforms.uEdgeSoftness.value = thermalSettings.gradientSoftness;
       material.uniforms.uThermalRadius.value = thermalSettings.radius;
+      material.uniforms.uThermalContrast.value = thermalSettings.contrast;
+      material.uniforms.uThermalNoise.value = thermalSettings.noise;
+      material.uniforms.uHotEdge.value = thermalSettings.hotEdge;
+      material.uniforms.uThermalRadiance.value = thermalSettings.radiance;
       material.uniforms.uGlobalOpacity.value = visibility;
       material.uniforms.uGlobalMaskSoftness.value = globalOpacitySettings.maskSoftness;
+      material.uniforms.uHeatFalloff.value = thermalSettings.heatFalloff;
+      const influenceNode = material.userData.heatInfluenceNode ?? material.userData.renderNode;
+      let rackHeatState = 0;
+      if (influenceNode && heatObjectRef.current && !heatBounds.box.isEmpty()) {
+        influenceNode.updateMatrixWorld(true);
+        heatBounds.sampleBox.setFromObject(influenceNode);
+        if (!heatBounds.sampleBox.isEmpty()) {
+          heatBounds.sampleBox.getCenter(heatBounds.sampleCenter);
+          rackHeatState = heatInfluenceAtPoint(
+            heatBounds.sampleCenter,
+            heatBounds.center,
+            heatBounds.halfSize,
+            thermalSettings.heatFalloff,
+          );
+        }
+      }
+      material.uniforms.uThermalState.value = rackHeatState;
       material.transparent = false;
       material.depthWrite = true;
       material.depthTest = true;
@@ -922,6 +1195,15 @@ function Model({
         color.set(thermalSettings.coldColors[index]);
       });
       material.uniforms.uCameraPosition.value.copy(camera.position);
+    });
+
+    floorMaterialsRef.current.forEach((material) => {
+      material.uniforms.uDotSize.value = floorSettings.dotSize;
+      material.uniforms.uDotSpacing.value = floorSettings.dotSpacing;
+      material.uniforms.uDotOpacity.value = floorSettings.dotOpacity;
+      material.transparent = true;
+      material.depthWrite = false;
+      material.needsUpdate = true;
     });
 
     coolingMaterialsRef.current.forEach((material) => {
@@ -971,24 +1253,20 @@ function Model({
       <group ref={groupRef}>
         <primitive object={scene} />
       </group>
-      {showBounds ? <boxHelper args={[scene, "#ffcc33"]} /> : null}
       <Controls target={boundsRef} enabled={orbitEnabled} />
     </>
   );
 }
 
 function Viewer({
-  mode,
-  showBounds,
-  autoRotate,
   orbitEnabled,
+  backgroundColor,
+  dofSettings,
   thermalSettings,
   coolingSettings,
   glassSettings,
+  floorSettings,
   globalOpacitySettings,
-  cameraSettings,
-  lightingEnabled,
-  globalLightSettings,
   animationProgress,
   onStats,
 }) {
@@ -996,38 +1274,36 @@ function Viewer({
     <Canvas
       camera={{ position: [2, 1.2, 4], fov: 38 }}
       dpr={[1, 2]}
-      gl={{ antialias: true, alpha: false }}
+      gl={{ antialias: true, alpha: false, preserveDrawingBuffer: true }}
       shadows
     >
-      <RendererSettings lightingEnabled={lightingEnabled} />
-      <color attach="background" args={["#080b0f"]} />
-      {lightingEnabled ? (
-        <>
-          <ambientLight
-            color={globalLightSettings.ambientColor}
-            intensity={globalLightSettings.ambientIntensity}
-          />
-          <hemisphereLight
-            args={[globalLightSettings.hemisphereSkyColor, globalLightSettings.hemisphereGroundColor, globalLightSettings.hemisphereIntensity]}
-          />
-          <EnvironmentSetup />
-        </>
-      ) : null}
+      <RendererSettings />
+      <color attach="background" args={[backgroundColor]} />
+      <ambientLight
+        color={DEFAULT_GLOBAL_LIGHT_SETTINGS.ambientColor}
+        intensity={DEFAULT_GLOBAL_LIGHT_SETTINGS.ambientIntensity}
+      />
+      <hemisphereLight
+        args={[
+          DEFAULT_GLOBAL_LIGHT_SETTINGS.hemisphereSkyColor,
+          DEFAULT_GLOBAL_LIGHT_SETTINGS.hemisphereGroundColor,
+          DEFAULT_GLOBAL_LIGHT_SETTINGS.hemisphereIntensity,
+        ]}
+      />
+      <EnvironmentSetup />
       <Suspense fallback={null}>
         <Model
-          mode={mode}
-          showBounds={showBounds}
-          autoRotate={autoRotate}
           orbitEnabled={orbitEnabled}
           thermalSettings={thermalSettings}
           coolingSettings={coolingSettings}
           glassSettings={glassSettings}
+          floorSettings={floorSettings}
           globalOpacitySettings={globalOpacitySettings}
-          cameraSettings={cameraSettings}
           animationProgress={animationProgress}
           onStats={onStats}
         />
       </Suspense>
+      <BokehDepthOfField settings={dofSettings} />
     </Canvas>
   );
 }
@@ -1042,41 +1318,53 @@ function Stat({ label, value }) {
 }
 
 function GuiControls({
-  mode,
-  setMode,
-  showBounds,
-  setShowBounds,
-  autoRotate,
-  setAutoRotate,
   orbitEnabled,
   setOrbitEnabled,
-  lightingEnabled,
-  setLightingEnabled,
+  backgroundColor,
+  setBackgroundColor,
+  dofSettings,
+  setDofSettings,
   thermalSettings,
   setThermalSettings,
   coolingSettings,
   setCoolingSettings,
   glassSettings,
   setGlassSettings,
+  floorSettings,
+  setFloorSettings,
   globalOpacitySettings,
   setGlobalOpacitySettings,
-  cameraSettings,
-  setCameraSettings,
-  globalLightSettings,
-  setGlobalLightSettings,
   animationProgress,
   setAnimationProgress,
 }) {
   useEffect(() => {
     const controls = {
-      previewMode: mode,
-      autoRotate,
       orbitEnabled,
-      lightingEnabled,
-      boundingBox: showBounds,
-      thermalState: thermalSettings.state,
+      backgroundColor,
+      dofEnabled: dofSettings.enabled,
+      dofFocus: dofSettings.focus,
+      dofAperture: dofSettings.aperture,
+      dofMaxblur: dofSettings.maxblur,
+      exportPng: () => {
+        const canvas = document.querySelector(".stage canvas");
+        if (!canvas) return;
+        canvas.toBlob((blob) => {
+          if (!blob) return;
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = `therma-canvas-${new Date().toISOString().replace(/[:.]/g, "-")}.png`;
+          link.click();
+          URL.revokeObjectURL(url);
+        }, "image/png");
+      },
       gradientSoftness: thermalSettings.gradientSoftness,
       thermalRadius: thermalSettings.radius,
+      thermalContrast: thermalSettings.contrast,
+      thermalNoise: thermalSettings.noise,
+      thermalHotEdge: thermalSettings.hotEdge,
+      thermalRadiance: thermalSettings.radiance,
+      thermalHeatFalloff: thermalSettings.heatFalloff,
       heat0: thermalSettings.heatColors[0],
       heat1: thermalSettings.heatColors[1],
       heat2: thermalSettings.heatColors[2],
@@ -1090,27 +1378,44 @@ function GuiControls({
       coolingRoughness: coolingSettings.roughness,
       glassOpacity: glassSettings.opacity,
       glassColor: glassSettings.color,
+      floorDotSize: floorSettings.dotSize,
+      floorDotSpacing: floorSettings.dotSpacing,
+      floorDotOpacity: floorSettings.dotOpacity,
       outsideRackOpacity: globalOpacitySettings.outsideRack,
       rackWithoutGpuOpacity: globalOpacitySettings.rackWithoutGpu,
       globalMaskSoftness: globalOpacitySettings.maskSoftness,
-      cameraNear: cameraSettings.near,
-      cameraFar: cameraSettings.far,
-      ambientColor: globalLightSettings.ambientColor,
-      ambientIntensity: globalLightSettings.ambientIntensity,
-      hemisphereSkyColor: globalLightSettings.hemisphereSkyColor,
-      hemisphereGroundColor: globalLightSettings.hemisphereGroundColor,
-      hemisphereIntensity: globalLightSettings.hemisphereIntensity,
       animationProgress,
+      industrialRainbowPreset: () => applyThermalPreset(THERMAL_PRESETS.industrialRainbow),
+      datacenterMagmaPreset: () => applyThermalPreset(THERMAL_PRESETS.datacenterMagma),
     };
+
+    const thermalControllers = [];
 
     const syncThermalSettings = () => {
       setThermalSettings({
-        state: controls.thermalState,
         gradientSoftness: controls.gradientSoftness,
         radius: controls.thermalRadius,
+        contrast: controls.thermalContrast,
+        noise: controls.thermalNoise,
+        hotEdge: controls.thermalHotEdge,
+        radiance: controls.thermalRadiance,
+        heatFalloff: controls.thermalHeatFalloff,
         heatColors: [controls.heat0, controls.heat1, controls.heat2, controls.heat3],
         coldColors: [controls.cold0, controls.cold1, controls.cold2, controls.cold3],
       });
+    };
+
+    const applyThermalPreset = (preset) => {
+      controls.gradientSoftness = preset.gradientSoftness;
+      controls.thermalRadius = preset.radius;
+      controls.thermalContrast = preset.contrast;
+      controls.thermalNoise = preset.noise;
+      controls.thermalHotEdge = preset.hotEdge;
+      controls.thermalHeatFalloff = DEFAULT_HEAT_FALLOFF;
+      [controls.heat0, controls.heat1, controls.heat2, controls.heat3] = preset.heatColors;
+      [controls.cold0, controls.cold1, controls.cold2, controls.cold3] = preset.coldColors;
+      syncThermalSettings();
+      thermalControllers.forEach((controller) => controller.updateDisplay());
     };
 
     const syncCoolingSettings = () => {
@@ -1128,6 +1433,14 @@ function GuiControls({
       });
     };
 
+    const syncFloorSettings = () => {
+      setFloorSettings({
+        dotSize: controls.floorDotSize,
+        dotSpacing: controls.floorDotSpacing,
+        dotOpacity: controls.floorDotOpacity,
+      });
+    };
+
     const syncGlobalOpacitySettings = () => {
       setGlobalOpacitySettings({
         outsideRack: controls.outsideRackOpacity,
@@ -1136,46 +1449,54 @@ function GuiControls({
       });
     };
 
-    const syncCameraSettings = () => {
-      setCameraSettings({
-        near: controls.cameraNear,
-        far: controls.cameraFar,
-      });
-    };
-
-    const syncGlobalLightSettings = () => {
-      setGlobalLightSettings({
-        ambientColor: controls.ambientColor,
-        ambientIntensity: controls.ambientIntensity,
-        hemisphereSkyColor: controls.hemisphereSkyColor,
-        hemisphereGroundColor: controls.hemisphereGroundColor,
-        hemisphereIntensity: controls.hemisphereIntensity,
+    const syncDofSettings = () => {
+      setDofSettings({
+        enabled: controls.dofEnabled,
+        focus: controls.dofFocus,
+        aperture: controls.dofAperture,
+        maxblur: controls.dofMaxblur,
       });
     };
 
     const gui = new GUI({ title: "Therma preview controls" });
-    gui.add(controls, "previewMode", ["materials", "clay", "wire"]).name("Preview mode").onChange(setMode);
-    gui.add(controls, "autoRotate").name("Auto rotate").onChange(setAutoRotate);
     gui.add(controls, "orbitEnabled").name("Orbit controls").onChange(setOrbitEnabled);
-    gui.add(controls, "lightingEnabled").name("Lighting + shadows").onChange(setLightingEnabled);
-    gui.add(controls, "boundingBox").name("Bounding box").onChange(setShowBounds);
+    gui.addColor(controls, "backgroundColor").name("Background").onChange(setBackgroundColor);
+    gui.add(controls, "exportPng").name("Save canvas PNG");
+
+    const dofFolder = gui.addFolder("Depth of field");
+    dofFolder.add(controls, "dofEnabled").name("Enabled").onChange(syncDofSettings);
+    dofFolder.add(controls, "dofFocus", 0.1, 300, 0.5).name("Focus").onChange(syncDofSettings);
+    dofFolder.add(controls, "dofAperture", 0.0001, 0.08, 0.0005).name("Aperture").onChange(syncDofSettings);
+    dofFolder.add(controls, "dofMaxblur", 0.0001, 0.08, 0.0005).name("Max blur").onChange(syncDofSettings);
 
     const thermalFolder = gui.addFolder("Thermal shader");
-    thermalFolder.add(controls, "thermalState", 0, 1, 0.01).name("Cold to heat").onChange(syncThermalSettings);
-    thermalFolder.add(controls, "gradientSoftness", 0.08, 1.2, 0.01).name("Gradient softness").onChange(syncThermalSettings);
-    thermalFolder.add(controls, "thermalRadius", 0.35, 1.35, 0.01).name("Layer radius").onChange(syncThermalSettings);
+    thermalFolder.add(controls, "industrialRainbowPreset").name("Preset: industrial rainbow");
+    thermalFolder.add(controls, "datacenterMagmaPreset").name("Preset: datacenter magma");
+    thermalControllers.push(
+      thermalFolder.add(controls, "gradientSoftness", 0.08, 1.2, 0.01).name("Gradient softness").onChange(syncThermalSettings),
+      thermalFolder.add(controls, "thermalRadius", 0.35, 1.35, 0.01).name("Layer radius").onChange(syncThermalSettings),
+      thermalFolder.add(controls, "thermalContrast", 0.7, 2.4, 0.01).name("Camera contrast").onChange(syncThermalSettings),
+      thermalFolder.add(controls, "thermalNoise", 0, 0.18, 0.005).name("Sensor noise").onChange(syncThermalSettings),
+      thermalFolder.add(controls, "thermalHotEdge", 0, 0.9, 0.01).name("Hot edges").onChange(syncThermalSettings),
+      thermalFolder.add(controls, "thermalRadiance", 0, 0.55, 0.005).name("Heat radiance").onChange(syncThermalSettings),
+      thermalFolder.add(controls, "thermalHeatFalloff", 0.05, 5, 0.01).name("Heat falloff").onChange(syncThermalSettings),
+    );
 
     const heatFolder = gui.addFolder("Heat gradient");
-    heatFolder.addColor(controls, "heat0").name("Edge").onChange(syncThermalSettings);
-    heatFolder.addColor(controls, "heat1").name("Low").onChange(syncThermalSettings);
-    heatFolder.addColor(controls, "heat2").name("Mid").onChange(syncThermalSettings);
-    heatFolder.addColor(controls, "heat3").name("Core").onChange(syncThermalSettings);
+    thermalControllers.push(
+      heatFolder.addColor(controls, "heat0").name("Edge").onChange(syncThermalSettings),
+      heatFolder.addColor(controls, "heat1").name("Low").onChange(syncThermalSettings),
+      heatFolder.addColor(controls, "heat2").name("Mid").onChange(syncThermalSettings),
+      heatFolder.addColor(controls, "heat3").name("Core").onChange(syncThermalSettings),
+    );
 
     const coldFolder = gui.addFolder("Cold gradient");
-    coldFolder.addColor(controls, "cold0").name("Edge").onChange(syncThermalSettings);
-    coldFolder.addColor(controls, "cold1").name("Low").onChange(syncThermalSettings);
-    coldFolder.addColor(controls, "cold2").name("Mid").onChange(syncThermalSettings);
-    coldFolder.addColor(controls, "cold3").name("Core").onChange(syncThermalSettings);
+    thermalControllers.push(
+      coldFolder.addColor(controls, "cold0").name("Edge").onChange(syncThermalSettings),
+      coldFolder.addColor(controls, "cold1").name("Low").onChange(syncThermalSettings),
+      coldFolder.addColor(controls, "cold2").name("Mid").onChange(syncThermalSettings),
+      coldFolder.addColor(controls, "cold3").name("Core").onChange(syncThermalSettings),
+    );
 
     const coolingFolder = gui.addFolder("Cooling material");
     coolingFolder.add(controls, "coolingVisibility", 0, 1, 0.01).name("Visibility mask").onChange(syncCoolingSettings);
@@ -1186,6 +1507,11 @@ function GuiControls({
     glassFolder.add(controls, "glassOpacity", 0, 0.5, 0.005).name("Opacity").onChange(syncGlassSettings);
     glassFolder.addColor(controls, "glassColor").name("Color").onChange(syncGlassSettings);
 
+    const floorFolder = gui.addFolder("Floor dots");
+    floorFolder.add(controls, "floorDotSize", 0.001, 0.2, 0.001).name("Dot size").onChange(syncFloorSettings);
+    floorFolder.add(controls, "floorDotSpacing", 0.02, 1.5, 0.005).name("Dot spacing").onChange(syncFloorSettings);
+    floorFolder.add(controls, "floorDotOpacity", 0, 1, 0.01).name("Dot opacity").onChange(syncFloorSettings);
+
     const opacityFolder = gui.addFolder("Global visibility mask");
     opacityFolder.add(controls, "outsideRackOpacity", 0, 1, 0.01).name("Outside rack").onChange(syncGlobalOpacitySettings);
     opacityFolder.add(controls, "rackWithoutGpuOpacity", 0, 1, 0.01).name("Rack no gpu").onChange(syncGlobalOpacitySettings);
@@ -1194,24 +1520,13 @@ function GuiControls({
     const animationFolder = gui.addFolder("Animation");
     animationFolder.add(controls, "animationProgress", 0, 1, 0.001).name("Timeline").onChange(setAnimationProgress);
 
-    const cameraFolder = gui.addFolder("Camera");
-    cameraFolder.add(controls, "cameraNear", 0.001, 5, 0.001).name("Near").onChange(syncCameraSettings);
-    cameraFolder.add(controls, "cameraFar", 10, 5000, 1).name("Far").onChange(syncCameraSettings);
-
-    const globalLightFolder = gui.addFolder("Global light");
-    globalLightFolder.addColor(controls, "ambientColor").name("Ambient color").onChange(syncGlobalLightSettings);
-    globalLightFolder.add(controls, "ambientIntensity", 0, 4, 0.01).name("Ambient intensity").onChange(syncGlobalLightSettings);
-    globalLightFolder.addColor(controls, "hemisphereSkyColor").name("Sky color").onChange(syncGlobalLightSettings);
-    globalLightFolder.addColor(controls, "hemisphereGroundColor").name("Ground color").onChange(syncGlobalLightSettings);
-    globalLightFolder.add(controls, "hemisphereIntensity", 0, 5, 0.01).name("Hemisphere intensity").onChange(syncGlobalLightSettings);
-
     thermalFolder.open();
+    dofFolder.open();
     coolingFolder.open();
     glassFolder.open();
+    floorFolder.open();
     opacityFolder.open();
     animationFolder.open();
-    cameraFolder.open();
-    globalLightFolder.open();
     heatFolder.open();
     coldFolder.open();
 
@@ -1290,17 +1605,19 @@ function InspectorPanel({ stats, isCollapsed, setIsCollapsed }) {
 
 function App() {
   const [stats, setStats] = useState(null);
-  const [mode, setMode] = useState("materials");
-  const [showBounds, setShowBounds] = useState(false);
-  const [autoRotate, setAutoRotate] = useState(false);
   const [orbitEnabled, setOrbitEnabled] = useState(false);
-  const [lightingEnabled, setLightingEnabled] = useState(true);
   const [isInspectorCollapsed, setIsInspectorCollapsed] = useState(false);
   const [animationProgress, setAnimationProgress] = useState(0);
+  const [backgroundColor, setBackgroundColor] = useState(DEFAULT_BACKGROUND_COLOR);
+  const [dofSettings, setDofSettings] = useState(DEFAULT_DOF_SETTINGS);
   const [thermalSettings, setThermalSettings] = useState({
-    state: DEFAULT_THERMAL_STATE,
     gradientSoftness: DEFAULT_GRADIENT_SOFTNESS,
     radius: DEFAULT_THERMAL_RADIUS,
+    contrast: DEFAULT_THERMAL_CONTRAST,
+    noise: DEFAULT_THERMAL_NOISE,
+    hotEdge: DEFAULT_THERMAL_HOT_EDGE,
+    radiance: DEFAULT_THERMAL_RADIANCE,
+    heatFalloff: DEFAULT_HEAT_FALLOFF,
     heatColors: DEFAULT_HEAT_GRADIENT,
     coldColors: DEFAULT_COLD_GRADIENT,
   });
@@ -1313,59 +1630,50 @@ function App() {
     opacity: DEFAULT_GLASS_OPACITY,
     color: DEFAULT_GLASS_COLOR,
   });
+  const [floorSettings, setFloorSettings] = useState({
+    dotSize: DEFAULT_FLOOR_DOT_SIZE,
+    dotSpacing: DEFAULT_FLOOR_DOT_SPACING,
+    dotOpacity: DEFAULT_FLOOR_DOT_OPACITY,
+  });
   const [globalOpacitySettings, setGlobalOpacitySettings] = useState({
     outsideRack: 1,
     rackWithoutGpu: 1,
     maskSoftness: DEFAULT_GLOBAL_MASK_SOFTNESS,
   });
-  const [cameraSettings, setCameraSettings] = useState({
-    near: DEFAULT_CAMERA_NEAR,
-    far: DEFAULT_CAMERA_FAR,
-  });
-  const [globalLightSettings, setGlobalLightSettings] = useState(DEFAULT_GLOBAL_LIGHT_SETTINGS);
 
   return (
     <main className="preview-app">
       <section className="stage">
         <Viewer
-          mode={mode}
-          showBounds={showBounds}
-          autoRotate={autoRotate}
           orbitEnabled={orbitEnabled}
+          backgroundColor={backgroundColor}
+          dofSettings={dofSettings}
           thermalSettings={thermalSettings}
           coolingSettings={coolingSettings}
           glassSettings={glassSettings}
+          floorSettings={floorSettings}
           globalOpacitySettings={globalOpacitySettings}
-          cameraSettings={cameraSettings}
-          lightingEnabled={lightingEnabled}
-          globalLightSettings={globalLightSettings}
           animationProgress={animationProgress}
           onStats={setStats}
         />
       </section>
       <GuiControls
-        mode={mode}
-        setMode={setMode}
-        showBounds={showBounds}
-        setShowBounds={setShowBounds}
-        autoRotate={autoRotate}
-        setAutoRotate={setAutoRotate}
         orbitEnabled={orbitEnabled}
         setOrbitEnabled={setOrbitEnabled}
-        lightingEnabled={lightingEnabled}
-        setLightingEnabled={setLightingEnabled}
+        backgroundColor={backgroundColor}
+        setBackgroundColor={setBackgroundColor}
+        dofSettings={dofSettings}
+        setDofSettings={setDofSettings}
         thermalSettings={thermalSettings}
         setThermalSettings={setThermalSettings}
         coolingSettings={coolingSettings}
         setCoolingSettings={setCoolingSettings}
         glassSettings={glassSettings}
         setGlassSettings={setGlassSettings}
+        floorSettings={floorSettings}
+        setFloorSettings={setFloorSettings}
         globalOpacitySettings={globalOpacitySettings}
         setGlobalOpacitySettings={setGlobalOpacitySettings}
-        cameraSettings={cameraSettings}
-        setCameraSettings={setCameraSettings}
-        globalLightSettings={globalLightSettings}
-        setGlobalLightSettings={setGlobalLightSettings}
         animationProgress={animationProgress}
         setAnimationProgress={setAnimationProgress}
       />
