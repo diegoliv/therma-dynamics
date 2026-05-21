@@ -80,13 +80,6 @@ function setupScrollTrigger({ config, options, setTime, durationSeconds }) {
   });
 }
 
-function prepareContainer(container) {
-  container.style.width ||= "100%";
-  container.style.height ||= "100%";
-  container.style.minHeight ||= "100%";
-  container.style.position ||= "relative";
-}
-
 export function mount(options = {}) {
   const container = typeof options.container === "string"
     ? document.querySelector(options.container)
@@ -95,8 +88,6 @@ export function mount(options = {}) {
   if (!container) {
     throw new Error("ThermaDynamics.mount requires a valid container.");
   }
-
-  prepareContainer(container);
 
   const root = createRoot(container);
   let scrollTrigger = null;
