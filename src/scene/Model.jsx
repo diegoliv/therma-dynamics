@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useLoader, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { MODEL_URL } from "../app/config.js";
 import { updateAnimationTimeline } from "../model/animationTimeline.js";
 import { updatePreviewFrame, updateSourceCamera } from "../model/frameUpdaters.js";
 import { createHeatBounds } from "../model/heatInfluence.js";
@@ -12,6 +11,7 @@ import { Controls } from "./Controls.jsx";
 
 export function Model({
   orbitEnabled,
+  modelUrl,
   thermalSettings,
   coolingSettings,
   glassSettings,
@@ -20,7 +20,7 @@ export function Model({
   animationProgress,
   onStats,
 }) {
-  const gltf = useLoader(GLTFLoader, MODEL_URL);
+  const gltf = useLoader(GLTFLoader, modelUrl);
   const groupRef = useRef();
   const boundsRef = useRef(new THREE.Vector3());
   const { camera } = useThree();

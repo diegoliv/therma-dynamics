@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { DEFAULT_HEAT_FALLOFF, THERMAL_PRESETS } from "../app/config.js";
 
 export function GuiControls({
@@ -18,12 +18,26 @@ export function GuiControls({
   setFloorSettings,
   globalOpacitySettings,
   setGlobalOpacitySettings,
-  animationProgress,
-  setAnimationProgress,
+  timelineTime,
+  setTimelineTime,
+  timelineConfig,
+  selectedKeyframeId,
+  setSelectedKeyframeId,
+  scrollSimulationEnabled,
+  setScrollSimulationEnabled,
+  captureTimelineState,
+  updateTimelineState,
+  deleteTimelineState,
+  exportTimelineConfig,
+  importTimelineConfig,
 }) {
+  const controlsRef = useRef(null);
+  const controllersRef = useRef([]);
+
   useEffect(() => {
     let gui;
     let isDisposed = false;
+    controllersRef.current = [];
 
     const controls = {
       orbitEnabled,
@@ -71,10 +85,18 @@ export function GuiControls({
       outsideRackOpacity: globalOpacitySettings.outsideRack,
       rackWithoutGpuOpacity: globalOpacitySettings.rackWithoutGpu,
       globalMaskSoftness: globalOpacitySettings.maskSoftness,
-      animationProgress,
+      timelineTime,
+      scrollSimulationEnabled,
+      selectedKeyframeId: selectedKeyframeId || "",
+      captureTimelineState,
+      updateTimelineState,
+      deleteTimelineState,
+      exportTimelineConfig,
+      importTimelineConfig,
       industrialRainbowPreset: () => applyThermalPreset(THERMAL_PRESETS.industrialRainbow),
       datacenterMagmaPreset: () => applyThermalPreset(THERMAL_PRESETS.datacenterMagma),
     };
+    controlsRef.current = controls;
 
     const thermalControllers = [];
 
@@ -209,7 +231,23 @@ export function GuiControls({
       opacityFolder.add(controls, "globalMaskSoftness", 0.001, 0.4, 0.001).name("Edge softness").onChange(syncGlobalOpacitySettings);
 
       const animationFolder = gui.addFolder("Animation");
-      animationFolder.add(controls, "animationProgress", 0, 1, 0.001).name("Timeline").onChange(setAnimationProgress);
+      const timelineController = animationFolder
+        .add(controls, "timelineTime", 0, timelineConfig.durationSeconds, 0.001)
+        .name("Timeline seconds")
+        .onChange(setTimelineTime);
+      animationFolder
+        .add(controls, "scrollSimulationEnabled")
+        .name("Scroll simulation")
+        .onChange(setScrollSimulationEnabled);
+      animationFolder.add(controls, "captureTimelineState").name("Capture current state");
+      animationFolder.add(controls, "updateTimelineState").name("Update selected state");
+      animationFolder.add(controls, "deleteTimelineState").name("Delete selected state");
+      animationFolder.add(controls, "exportTimelineConfig").name("Export timeline JSON");
+      animationFolder.add(controls, "importTimelineConfig").name("Import timeline JSON");
+      animationFolder
+        .add(controls, "selectedKeyframeId")
+        .name("Selected state")
+        .onFinishChange((value) => setSelectedKeyframeId(value || null));
 
       thermalFolder.open();
       dofFolder.open();
@@ -220,6 +258,12 @@ export function GuiControls({
       animationFolder.open();
       heatFolder.open();
       coldFolder.open();
+
+      controllersRef.current = [
+        ...thermalControllers,
+        timelineController,
+        ...gui.controllersRecursive(),
+      ];
     }
 
     mountGui();
@@ -227,8 +271,68 @@ export function GuiControls({
     return () => {
       isDisposed = true;
       gui?.destroy();
+      controlsRef.current = null;
+      controllersRef.current = [];
     };
-  }, []);
+  }, [timelineConfig.durationSeconds]);
+
+  useEffect(() => {
+    const controls = controlsRef.current;
+    if (!controls) return;
+
+    controls.orbitEnabled = orbitEnabled;
+    controls.backgroundColor = backgroundColor;
+    controls.dofEnabled = dofSettings.enabled;
+    controls.dofFocus = dofSettings.focus;
+    controls.dofAperture = dofSettings.aperture;
+    controls.dofMaxblur = dofSettings.maxblur;
+    controls.gradientSoftness = thermalSettings.gradientSoftness;
+    controls.thermalRadius = thermalSettings.radius;
+    controls.thermalContrast = thermalSettings.contrast;
+    controls.thermalNoise = thermalSettings.noise;
+    controls.thermalHotEdge = thermalSettings.hotEdge;
+    controls.thermalRadiance = thermalSettings.radiance;
+    controls.thermalHeatFalloff = thermalSettings.heatFalloff;
+    [controls.heat0, controls.heat1, controls.heat2, controls.heat3] = thermalSettings.heatColors;
+    [controls.cold0, controls.cold1, controls.cold2, controls.cold3] = thermalSettings.coldColors;
+    controls.coolingVisibility = coolingSettings.visibility;
+    controls.coolingColor = coolingSettings.color;
+    controls.coolingRoughness = coolingSettings.roughness;
+    controls.glassOpacity = glassSettings.opacity;
+    controls.glassColor = glassSettings.color;
+    controls.floorDotSize = floorSettings.dotSize;
+    controls.floorDotSpacing = floorSettings.dotSpacing;
+    controls.floorDotOpacity = floorSettings.dotOpacity;
+    controls.outsideRackOpacity = globalOpacitySettings.outsideRack;
+    controls.rackWithoutGpuOpacity = globalOpacitySettings.rackWithoutGpu;
+    controls.globalMaskSoftness = globalOpacitySettings.maskSoftness;
+    controls.timelineTime = timelineTime;
+    controls.scrollSimulationEnabled = scrollSimulationEnabled;
+    controls.selectedKeyframeId = selectedKeyframeId || "";
+    controls.captureTimelineState = captureTimelineState;
+    controls.updateTimelineState = updateTimelineState;
+    controls.deleteTimelineState = deleteTimelineState;
+    controls.exportTimelineConfig = exportTimelineConfig;
+    controls.importTimelineConfig = importTimelineConfig;
+    controllersRef.current.forEach((controller) => controller.updateDisplay());
+  }, [
+    backgroundColor,
+    coolingSettings,
+    dofSettings,
+    floorSettings,
+    glassSettings,
+    globalOpacitySettings,
+    orbitEnabled,
+    scrollSimulationEnabled,
+    selectedKeyframeId,
+    thermalSettings,
+    timelineTime,
+    captureTimelineState,
+    deleteTimelineState,
+    exportTimelineConfig,
+    importTimelineConfig,
+    updateTimelineState,
+  ]);
 
   return null;
 }

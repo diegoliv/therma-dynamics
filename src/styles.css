@@ -21,6 +21,14 @@ body,
   background: #080b0f;
 }
 
+html.is-therma-scroll-sim,
+body.is-therma-scroll-sim,
+body.is-therma-scroll-sim #root {
+  height: auto;
+  min-height: 100%;
+  overflow: auto;
+}
+
 button,
 input,
 canvas {
@@ -40,9 +48,26 @@ button {
     #080b0f;
 }
 
+.preview-app.is-scroll-sim {
+  height: auto;
+  min-height: 100%;
+}
+
 .stage {
   position: fixed;
   inset: 0;
+}
+
+.authoring-scroll-sim {
+  position: relative;
+  z-index: 1;
+  min-height: 900vh;
+  pointer-events: none;
+}
+
+.authoring-scroll-section {
+  width: 100%;
+  height: 100vh;
 }
 
 .stage canvas {

@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
-import { DEFAULT_GLOBAL_LIGHT_SETTINGS } from "../app/config.js";
+import { DEFAULT_GLOBAL_LIGHT_SETTINGS, MODEL_URL } from "../app/config.js";
 import { BokehDepthOfField } from "./BokehDepthOfField.jsx";
 import { EnvironmentSetup } from "./EnvironmentSetup.jsx";
 import { Model } from "./Model.jsx";
@@ -16,6 +16,7 @@ export function Viewer({
   floorSettings,
   globalOpacitySettings,
   animationProgress,
+  modelUrl = MODEL_URL,
   onStats,
 }) {
   return (
@@ -42,6 +43,7 @@ export function Viewer({
       <Suspense fallback={null}>
         <Model
           orbitEnabled={orbitEnabled}
+          modelUrl={modelUrl}
           thermalSettings={thermalSettings}
           coolingSettings={coolingSettings}
           glassSettings={glassSettings}

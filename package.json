@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "build": "vite build",
+    "build": "npm run build:authoring && npm run build:embed",
+    "build:authoring": "vite build",
+    "build:embed": "vite build --config vite.embed.config.js",
     "preview": "vite preview --host 127.0.0.1"
   },
   "dependencies": {

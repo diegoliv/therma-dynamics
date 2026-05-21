@@ -11,6 +11,58 @@ npm run dev
 
 Open the local URL printed by Vite, usually `http://127.0.0.1:5173/`.
 
+## Authoring and Webflow builds
+
+The default dev app is the authoring version. It keeps the GUI, exposes the
+timeline in seconds from `0` to `9`, can capture/update/delete timeline states,
+exports the timeline JSON, and includes a scroll simulation mode with nine
+`100vh` sections.
+
+```bash
+npm run build:authoring
+npm run build:embed
+```
+
+`npm run build:embed` generates `dist-webflow/therma-dynamics.js`, an IIFE build
+that registers `window.ThermaDynamics.mount`.
+
+Expected Webflow structure:
+
+```html
+<div class="therma-scroll-page">
+  <div class="therma-sticky-stage">
+    <div id="therma-dynamics-host"></div>
+  </div>
+  <section class="therma-scroll-section"></section>
+  <section class="therma-scroll-section"></section>
+  <section class="therma-scroll-section"></section>
+  <section class="therma-scroll-section"></section>
+  <section class="therma-scroll-section"></section>
+  <section class="therma-scroll-section"></section>
+  <section class="therma-scroll-section"></section>
+  <section class="therma-scroll-section"></section>
+  <section class="therma-scroll-section"></section>
+</div>
+```
+
+Expected Webflow mount call, after GSAP and ScrollTrigger are loaded:
+
+```html
+<script>
+  window.ThermaDynamics.mount({
+    container: "#therma-dynamics-host",
+    configUrl: "https://your-cdn.example/therma-dynamics-timeline.json",
+    publicPath: "https://your-cdn.example/",
+    scrollTrigger: {
+      trigger: ".therma-scroll-page",
+      start: "top top",
+      end: "bottom bottom",
+      scrub: true
+    }
+  });
+</script>
+```
+
 ## How it works
 
 - `src/main.jsx` contains the R3F scene, GLB loading, OrbitControls, GSAP/Lenis scroll progress, and custom GLSL shaders.

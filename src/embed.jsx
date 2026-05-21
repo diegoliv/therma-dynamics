@@ -1,0 +1,156 @@
+import { useEffect, useMemo, useState } from "react";
+import { createRoot } from "react-dom/client";
+import { Viewer } from "./scene/Viewer.jsx";
+import { createDefaultTimelineConfig, normalizeTimelineConfig } from "./timeline/defaultTimelineConfig.js";
+import { stateToProps } from "./timeline/experienceState.js";
+import { resolveTimelineState } from "./timeline/interpolateExperienceState.js";
+
+function EmbedApp({ config, modelUrl, onReady }) {
+  const [timelineTime, setTimelineTime] = useState(0);
+  const durationSeconds = Math.max(config.durationSeconds ?? 1, 0.0001);
+  const animationProgress = timelineTime / durationSeconds;
+  const state = useMemo(
+    () => resolveTimelineState(config, timelineTime),
+    [config, timelineTime],
+  );
+  const props = stateToProps(state);
+
+  useEffect(() => {
+    onReady?.({
+      durationSeconds,
+      setTime: (time) => setTimelineTime(Math.max(0, Math.min(time, durationSeconds))),
+    });
+  }, [durationSeconds, onReady]);
+
+  return (
+    <Viewer
+      orbitEnabled={false}
+      modelUrl={modelUrl}
+      backgroundColor={props.backgroundColor}
+      dofSettings={props.dofSettings}
+      thermalSettings={props.thermalSettings}
+      coolingSettings={props.coolingSettings}
+      glassSettings={props.glassSettings}
+      floorSettings={props.floorSettings}
+      globalOpacitySettings={props.globalOpacitySettings}
+      animationProgress={animationProgress}
+      onStats={() => {}}
+    />
+  );
+}
+
+async function loadTimelineConfig(options) {
+  if (options.config) return normalizeTimelineConfig(options.config);
+  if (options.configUrl) {
+    const response = await fetch(options.configUrl);
+    if (!response.ok) throw new Error(`Unable to load Therma Dynamics config: ${response.status}`);
+    return normalizeTimelineConfig(await response.json());
+  }
+  return createDefaultTimelineConfig();
+}
+
+function resolveAssetUrl(url, publicPath) {
+  if (!url || !publicPath || /^(https?:)?\/\//.test(url) || url.startsWith("data:")) return url;
+  return new URL(url.replace(/^\//, ""), publicPath.endsWith("/") ? publicPath : `${publicPath}/`).toString();
+}
+
+function setupScrollTrigger({ config, options, setTime, durationSeconds }) {
+  const gsap = window.gsap;
+  const ScrollTrigger = window.ScrollTrigger || gsap?.ScrollTrigger;
+  if (!gsap || !ScrollTrigger) {
+    console.warn("ThermaDynamics: GSAP and ScrollTrigger must be loaded before the embed script.");
+    return null;
+  }
+
+  gsap.registerPlugin?.(ScrollTrigger);
+
+  const scrollConfig = {
+    ...(config.scroll ?? {}),
+    ...(options.scrollTrigger ?? {}),
+  };
+  const trigger = scrollConfig.trigger || scrollConfig.triggerSelector || ".therma-scroll-page";
+
+  return ScrollTrigger.create({
+    trigger,
+    start: scrollConfig.start || "top top",
+    end: scrollConfig.end || "bottom bottom",
+    scrub: scrollConfig.scrub ?? true,
+    invalidateOnRefresh: true,
+    onUpdate: (self) => setTime(self.progress * durationSeconds),
+  });
+}
+
+function prepareContainer(container) {
+  container.style.width ||= "100%";
+  container.style.height ||= "100%";
+  container.style.minHeight ||= "100%";
+  container.style.position ||= "relative";
+}
+
+export function mount(options = {}) {
+  const container = typeof options.container === "string"
+    ? document.querySelector(options.container)
+    : options.container;
+
+  if (!container) {
+    throw new Error("ThermaDynamics.mount requires a valid container.");
+  }
+
+  prepareContainer(container);
+
+  const root = createRoot(container);
+  let scrollTrigger = null;
+  let setTime = null;
+  let pendingTime = null;
+  let isDestroyed = false;
+
+  const instance = {
+    setTime(time) {
+      if (setTime) {
+        setTime(time);
+        return;
+      }
+      pendingTime = time;
+    },
+    destroy() {
+      isDestroyed = true;
+      scrollTrigger?.kill?.();
+      root.unmount();
+    },
+  };
+
+  loadTimelineConfig(options)
+    .then((config) => {
+      if (isDestroyed) return;
+      const publicPath = options.publicPath ?? config.publicPath;
+      const modelUrl = resolveAssetUrl(config.source?.modelUrl, publicPath);
+      root.render(
+        <EmbedApp
+          config={config}
+          modelUrl={modelUrl}
+          onReady={({ durationSeconds, setTime: setTimelineTime }) => {
+            setTime = setTimelineTime;
+            if (pendingTime !== null) {
+              setTime(pendingTime);
+              pendingTime = null;
+            }
+            scrollTrigger = setupScrollTrigger({
+              config,
+              options,
+              setTime,
+              durationSeconds,
+            });
+          }}
+        />,
+      );
+    })
+    .catch((error) => {
+      console.error(error);
+    });
+
+  return instance;
+}
+
+window.ThermaDynamics = {
+  mount,
+};

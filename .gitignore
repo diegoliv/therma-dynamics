@@ -1,9 +1,12 @@
 node_modules/
 dist/
 dist-check/
+dist-webflow/
 
 .cdp-profile*/
 .chrome-headless/
+.chrome-verify*/
+.edge-verify/
 
 *.log
 .DS_Store
