@@ -194,7 +194,7 @@ function App() {
           if (!trigger) return;
           ScrollTrigger.create({
             trigger,
-            start: "top bottom",
+            start: "top top",
             end: "bottom top",
             scrub: true,
             onUpdate: (self) => setTimelineTime(timelineTimeForSectionProgress(section, self.progress)),

@@ -42,7 +42,9 @@ Expected Webflow structure:
 
 Each `.therma-scroll-section` controls its own timeline interval through
 `data-therma-from` and `data-therma-to`. Taller Webflow sections make that
-interval play more slowly.
+interval play more slowly. By default, a section maps its interval from
+`top top` to `bottom top`, so a `100vh` section interpolates over `100vh` of
+scroll and a `200vh` section interpolates over `200vh`.
 
 Expected Webflow mount call, after GSAP and ScrollTrigger are loaded:
 

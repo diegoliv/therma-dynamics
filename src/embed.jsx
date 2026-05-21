@@ -106,7 +106,7 @@ function setupScrollTrigger({ config, options, setTime, durationSeconds }) {
   if (sectionTriggers.length) {
     const triggers = sectionTriggers.map((section) => ScrollTrigger.create({
       trigger: section.element,
-      start: scrollConfig.sectionStart || scrollConfig.start || "top bottom",
+      start: scrollConfig.sectionStart || scrollConfig.start || "top top",
       end: scrollConfig.sectionEnd || scrollConfig.end || "bottom top",
       scrub: scrollConfig.scrub ?? true,
       invalidateOnRefresh: true,
