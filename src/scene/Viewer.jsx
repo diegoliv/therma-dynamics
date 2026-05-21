@@ -1,14 +1,13 @@
-import { Suspense } from "react";
-import { Canvas } from "@react-three/fiber";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { createRoot } from "@react-three/fiber";
 import { DEFAULT_GLOBAL_LIGHT_SETTINGS, MODEL_URL } from "../app/config.js";
 import { BokehDepthOfField } from "./BokehDepthOfField.jsx";
 import { EnvironmentSetup } from "./EnvironmentSetup.jsx";
 import { Model } from "./Model.jsx";
 import { RendererSettings } from "./RendererSettings.jsx";
 
-export function Viewer({
+function SceneContent({
   orbitEnabled,
-  backgroundColor,
   dofSettings,
   thermalSettings,
   coolingSettings,
@@ -20,12 +19,7 @@ export function Viewer({
   onStats,
 }) {
   return (
-    <Canvas
-      camera={{ position: [2, 1.2, 4], fov: 38 }}
-      dpr={[1, 2]}
-      gl={{ antialias: true, alpha: true, preserveDrawingBuffer: true }}
-      shadows
-    >
+    <>
       <RendererSettings />
       <ambientLight
         color={DEFAULT_GLOBAL_LIGHT_SETTINGS.ambientColor}
@@ -53,6 +47,50 @@ export function Viewer({
         />
       </Suspense>
       <BokehDepthOfField settings={dofSettings} />
-    </Canvas>
+    </>
+  );
+}
+
+export function Viewer(props) {
+  const canvasRef = useRef(null);
+  const rootRef = useRef(null);
+  const [isConfigured, setIsConfigured] = useState(false);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return undefined;
+
+    let isDisposed = false;
+    const root = createRoot(canvas);
+    root
+      .configure({
+        camera: { position: [2, 1.2, 4], fov: 38 },
+        dpr: [1, 2],
+        gl: { antialias: true, alpha: true, preserveDrawingBuffer: true },
+        shadows: true,
+      })
+      .then(() => {
+        if (isDisposed) return;
+        rootRef.current = root;
+        setIsConfigured(true);
+      });
+
+    return () => {
+      isDisposed = true;
+      root.unmount();
+      rootRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isConfigured || !rootRef.current) return;
+    rootRef.current.render(<SceneContent {...props} />);
+  }, [isConfigured, props]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="therma-canvas"
+    />
   );
 }
