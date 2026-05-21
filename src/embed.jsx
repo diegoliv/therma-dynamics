@@ -5,6 +5,8 @@ import { createDefaultTimelineConfig, normalizeTimelineConfig } from "./timeline
 import { stateToProps } from "./timeline/experienceState.js";
 import { resolveTimelineState } from "./timeline/interpolateExperienceState.js";
 
+const EMBED_VERSION = "2026-05-21.2";
+
 function EmbedApp({ config, modelUrl, onReady }) {
   const [timelineTime, setTimelineTime] = useState(0);
   const durationSeconds = Math.max(config.durationSeconds ?? 1, 0.0001);
@@ -150,4 +152,5 @@ export function mount(options = {}) {
 
 window.ThermaDynamics = {
   mount,
+  version: EMBED_VERSION,
 };
