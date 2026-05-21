@@ -1,0 +1,605 @@
+{
+  "schemaVersion": 1,
+  "name": "therma-dynamics-webflow-v1",
+  "durationSeconds": 9,
+  "source": {
+    "modelUrl": "/models/therma_dynamics_v2.glb"
+  },
+  "scroll": {
+    "sectionCount": 9,
+    "scrub": true,
+    "triggerSelector": ".therma-scroll-page",
+    "sectionSelector": ".therma-scroll-section"
+  },
+  "defaults": {
+    "backgroundColor": "#080b0f",
+    "dof": {
+      "enabled": false,
+      "focus": 40,
+      "aperture": 0.018,
+      "maxblur": 0.012
+    },
+    "thermal": {
+      "gradientSoftness": 0.24,
+      "radius": 1,
+      "contrast": 1.52,
+      "noise": 0.095,
+      "hotEdge": 0.48,
+      "radiance": 0.16,
+      "heatFalloff": 1.25,
+      "heatColors": [
+        "#00105c",
+        "#00d8ff",
+        "#a7ff00",
+        "#ff1600"
+      ],
+      "coldColors": [
+        "#000000",
+        "#00084c",
+        "#0026b8",
+        "#00a8ff"
+      ]
+    },
+    "cooling": {
+      "visibility": 1,
+      "color": "#65d7ff",
+      "roughness": 0.16
+    },
+    "glass": {
+      "opacity": 0.06,
+      "color": "#c8f8ff"
+    },
+    "floor": {
+      "dotSize": 0.025,
+      "dotSpacing": 0.22,
+      "dotOpacity": 0.35
+    },
+    "globalOpacity": {
+      "outsideRack": 1,
+      "rackWithoutGpu": 1,
+      "maskSoftness": 0.14
+    }
+  },
+  "keyframes": [
+    {
+      "id": "start",
+      "time": 0,
+      "easeToNext": "power1.inOut",
+      "state": {
+        "backgroundColor": "#080b0f",
+        "dof": {
+          "enabled": false,
+          "focus": 40,
+          "aperture": 0.018,
+          "maxblur": 0.012
+        },
+        "thermal": {
+          "gradientSoftness": 1.2,
+          "radius": 1.35,
+          "contrast": 0.7,
+          "noise": 0.095,
+          "hotEdge": 0,
+          "radiance": 0.17,
+          "heatFalloff": 1.66,
+          "heatColors": [
+            "#00105c",
+            "#00d8ff",
+            "#a7ff00",
+            "#ff1600"
+          ],
+          "coldColors": [
+            "#000000",
+            "#00084c",
+            "#0026b8",
+            "#00a8ff"
+          ]
+        },
+        "cooling": {
+          "visibility": 0,
+          "color": "#65d7ff",
+          "roughness": 0.16
+        },
+        "glass": {
+          "opacity": 0.06,
+          "color": "#c8f8ff"
+        },
+        "floor": {
+          "dotSize": 0.025,
+          "dotSpacing": 1.5,
+          "dotOpacity": 0
+        },
+        "globalOpacity": {
+          "outsideRack": 1,
+          "rackWithoutGpu": 1,
+          "maskSoftness": 0.14
+        }
+      }
+    },
+    {
+      "id": "state-1-000",
+      "time": 1,
+      "easeToNext": "power1.inOut",
+      "state": {
+        "backgroundColor": "#080b0f",
+        "dof": {
+          "enabled": false,
+          "focus": 40,
+          "aperture": 0.018,
+          "maxblur": 0.012
+        },
+        "thermal": {
+          "gradientSoftness": 1.2,
+          "radius": 1.35,
+          "contrast": 0.7,
+          "noise": 0.095,
+          "hotEdge": 0,
+          "radiance": 0.17,
+          "heatFalloff": 5,
+          "heatColors": [
+            "#00105c",
+            "#00d8ff",
+            "#a7ff00",
+            "#ff1600"
+          ],
+          "coldColors": [
+            "#000000",
+            "#00084c",
+            "#0026b8",
+            "#00a8ff"
+          ]
+        },
+        "cooling": {
+          "visibility": 0,
+          "color": "#65d7ff",
+          "roughness": 0.16
+        },
+        "glass": {
+          "opacity": 0.06,
+          "color": "#c8f8ff"
+        },
+        "floor": {
+          "dotSize": 0.025,
+          "dotSpacing": 1.5,
+          "dotOpacity": 0.2
+        },
+        "globalOpacity": {
+          "outsideRack": 1,
+          "rackWithoutGpu": 1,
+          "maskSoftness": 0.14
+        }
+      }
+    },
+    {
+      "id": "state-2-000",
+      "time": 2,
+      "easeToNext": "power1.inOut",
+      "state": {
+        "backgroundColor": "#080b0f",
+        "dof": {
+          "enabled": false,
+          "focus": 40,
+          "aperture": 0.018,
+          "maxblur": 0.012
+        },
+        "thermal": {
+          "gradientSoftness": 1.2,
+          "radius": 1.35,
+          "contrast": 0.7,
+          "noise": 0.095,
+          "hotEdge": 0,
+          "radiance": 0.17,
+          "heatFalloff": 5,
+          "heatColors": [
+            "#00105c",
+            "#00d8ff",
+            "#a7ff00",
+            "#ff1600"
+          ],
+          "coldColors": [
+            "#000000",
+            "#00084c",
+            "#0026b8",
+            "#00a8ff"
+          ]
+        },
+        "cooling": {
+          "visibility": 0,
+          "color": "#65d7ff",
+          "roughness": 0.16
+        },
+        "glass": {
+          "opacity": 0.06,
+          "color": "#c8f8ff"
+        },
+        "floor": {
+          "dotSize": 0.025,
+          "dotSpacing": 1.5,
+          "dotOpacity": 0.2
+        },
+        "globalOpacity": {
+          "outsideRack": 1,
+          "rackWithoutGpu": 1,
+          "maskSoftness": 0.14
+        }
+      }
+    },
+    {
+      "id": "state-3-000",
+      "time": 3,
+      "easeToNext": "power1.inOut",
+      "state": {
+        "backgroundColor": "#080b0f",
+        "dof": {
+          "enabled": false,
+          "focus": 40,
+          "aperture": 0.018,
+          "maxblur": 0.012
+        },
+        "thermal": {
+          "gradientSoftness": 1.1999999999999997,
+          "radius": 1.35,
+          "contrast": 0.7,
+          "noise": 0.095,
+          "hotEdge": 0,
+          "radiance": 0.17,
+          "heatFalloff": 5,
+          "heatColors": [
+            "#00105c",
+            "#00d8ff",
+            "#a7ff00",
+            "#ff1600"
+          ],
+          "coldColors": [
+            "#000000",
+            "#00084c",
+            "#0026b8",
+            "#00a8ff"
+          ]
+        },
+        "cooling": {
+          "visibility": 0,
+          "color": "#65d7ff",
+          "roughness": 0.16
+        },
+        "glass": {
+          "opacity": 0.06,
+          "color": "#c8f8ff"
+        },
+        "floor": {
+          "dotSize": 0.2,
+          "dotSpacing": 1.5,
+          "dotOpacity": 0.2
+        },
+        "globalOpacity": {
+          "outsideRack": 0,
+          "rackWithoutGpu": 1,
+          "maskSoftness": 0.14
+        }
+      }
+    },
+    {
+      "id": "state-4-000",
+      "time": 4,
+      "easeToNext": "power1.inOut",
+      "state": {
+        "backgroundColor": "#080b0f",
+        "dof": {
+          "enabled": false,
+          "focus": 40,
+          "aperture": 0.018,
+          "maxblur": 0.011999999999999999
+        },
+        "thermal": {
+          "gradientSoftness": 1.1999999999999997,
+          "radius": 1.35,
+          "contrast": 0.7,
+          "noise": 0.095,
+          "hotEdge": 0,
+          "radiance": 0.17,
+          "heatFalloff": 5,
+          "heatColors": [
+            "#00105c",
+            "#00d8ff",
+            "#a7ff00",
+            "#ff1600"
+          ],
+          "coldColors": [
+            "#000000",
+            "#00084c",
+            "#0026b8",
+            "#00a8ff"
+          ]
+        },
+        "cooling": {
+          "visibility": 0,
+          "color": "#65d7ff",
+          "roughness": 0.16
+        },
+        "glass": {
+          "opacity": 0.06,
+          "color": "#c8f8ff"
+        },
+        "floor": {
+          "dotSize": 0.025,
+          "dotSpacing": 1.5,
+          "dotOpacity": 0.2
+        },
+        "globalOpacity": {
+          "outsideRack": 0,
+          "rackWithoutGpu": 0,
+          "maskSoftness": 0.14
+        }
+      }
+    },
+    {
+      "id": "state-5-000",
+      "time": 5,
+      "easeToNext": "power1.inOut",
+      "state": {
+        "backgroundColor": "#080b0f",
+        "dof": {
+          "enabled": false,
+          "focus": 40,
+          "aperture": 0.018,
+          "maxblur": 0.011999999999999999
+        },
+        "thermal": {
+          "gradientSoftness": 1.1999999999999997,
+          "radius": 1.35,
+          "contrast": 0.7,
+          "noise": 0.09499999999999999,
+          "hotEdge": 0,
+          "radiance": 0.17,
+          "heatFalloff": 5,
+          "heatColors": [
+            "#00105c",
+            "#00d8ff",
+            "#a7ff00",
+            "#ff1600"
+          ],
+          "coldColors": [
+            "#000000",
+            "#00084c",
+            "#0026b8",
+            "#00a8ff"
+          ]
+        },
+        "cooling": {
+          "visibility": 1,
+          "color": "#65d7ff",
+          "roughness": 0.16
+        },
+        "glass": {
+          "opacity": 0.05999999999999999,
+          "color": "#c8f8ff"
+        },
+        "floor": {
+          "dotSize": 0.025,
+          "dotSpacing": 1.5,
+          "dotOpacity": 0.2
+        },
+        "globalOpacity": {
+          "outsideRack": 0,
+          "rackWithoutGpu": 0,
+          "maskSoftness": 0.14
+        }
+      }
+    },
+    {
+      "id": "state-6-000",
+      "time": 6,
+      "easeToNext": "power1.inOut",
+      "state": {
+        "backgroundColor": "#080b0f",
+        "dof": {
+          "enabled": false,
+          "focus": 40,
+          "aperture": 0.018,
+          "maxblur": 0.011999999999999999
+        },
+        "thermal": {
+          "gradientSoftness": 1.1999999999999997,
+          "radius": 1.35,
+          "contrast": 0.7,
+          "noise": 0.09499999999999999,
+          "hotEdge": 0,
+          "radiance": 0.17,
+          "heatFalloff": 5,
+          "heatColors": [
+            "#00105c",
+            "#00d8ff",
+            "#a7ff00",
+            "#ff1600"
+          ],
+          "coldColors": [
+            "#000000",
+            "#00084c",
+            "#0026b8",
+            "#00a8ff"
+          ]
+        },
+        "cooling": {
+          "visibility": 1,
+          "color": "#65d7ff",
+          "roughness": 0.16
+        },
+        "glass": {
+          "opacity": 0.05999999999999999,
+          "color": "#c8f8ff"
+        },
+        "floor": {
+          "dotSize": 0.025,
+          "dotSpacing": 1.5,
+          "dotOpacity": 0.2
+        },
+        "globalOpacity": {
+          "outsideRack": 0,
+          "rackWithoutGpu": 1,
+          "maskSoftness": 0.14
+        }
+      }
+    },
+    {
+      "id": "state-7-000",
+      "time": 7,
+      "easeToNext": "power1.inOut",
+      "state": {
+        "backgroundColor": "#080b0f",
+        "dof": {
+          "enabled": false,
+          "focus": 40,
+          "aperture": 0.018,
+          "maxblur": 0.011999999999999999
+        },
+        "thermal": {
+          "gradientSoftness": 1.1999999999999997,
+          "radius": 1.35,
+          "contrast": 0.7,
+          "noise": 0.09499999999999999,
+          "hotEdge": 0,
+          "radiance": 0.17,
+          "heatFalloff": 5,
+          "heatColors": [
+            "#00105c",
+            "#00d8ff",
+            "#a7ff00",
+            "#ff1600"
+          ],
+          "coldColors": [
+            "#000000",
+            "#00084c",
+            "#0026b8",
+            "#00a8ff"
+          ]
+        },
+        "cooling": {
+          "visibility": 1,
+          "color": "#65d7ff",
+          "roughness": 0.16
+        },
+        "glass": {
+          "opacity": 0.05999999999999999,
+          "color": "#c8f8ff"
+        },
+        "floor": {
+          "dotSize": 0.025,
+          "dotSpacing": 1.5,
+          "dotOpacity": 0.2
+        },
+        "globalOpacity": {
+          "outsideRack": 1,
+          "rackWithoutGpu": 1,
+          "maskSoftness": 0.14
+        }
+      }
+    },
+    {
+      "id": "state-8-000",
+      "time": 8,
+      "easeToNext": "power1.inOut",
+      "state": {
+        "backgroundColor": "#080b0f",
+        "dof": {
+          "enabled": false,
+          "focus": 40,
+          "aperture": 0.018,
+          "maxblur": 0.011999999999999999
+        },
+        "thermal": {
+          "gradientSoftness": 1.1999999999999997,
+          "radius": 1.35,
+          "contrast": 0.7,
+          "noise": 0.09499999999999999,
+          "hotEdge": 0,
+          "radiance": 0.17,
+          "heatFalloff": 5,
+          "heatColors": [
+            "#00105c",
+            "#00d8ff",
+            "#a7ff00",
+            "#ff1600"
+          ],
+          "coldColors": [
+            "#000000",
+            "#00084c",
+            "#0026b8",
+            "#00a8ff"
+          ]
+        },
+        "cooling": {
+          "visibility": 1,
+          "color": "#65d7ff",
+          "roughness": 0.16
+        },
+        "glass": {
+          "opacity": 0.05999999999999999,
+          "color": "#c8f8ff"
+        },
+        "floor": {
+          "dotSize": 0.025,
+          "dotSpacing": 1.5,
+          "dotOpacity": 0.2
+        },
+        "globalOpacity": {
+          "outsideRack": 1,
+          "rackWithoutGpu": 1,
+          "maskSoftness": 0.14
+        }
+      }
+    },
+    {
+      "id": "end",
+      "time": 9,
+      "easeToNext": "power1.inOut",
+      "state": {
+        "backgroundColor": "#080b0f",
+        "dof": {
+          "enabled": false,
+          "focus": 40,
+          "aperture": 0.018,
+          "maxblur": 0.011999999999999999
+        },
+        "thermal": {
+          "gradientSoftness": 1.1999999999999997,
+          "radius": 1.35,
+          "contrast": 0.7,
+          "noise": 0.09499999999999999,
+          "hotEdge": 0,
+          "radiance": 0.17,
+          "heatFalloff": 5,
+          "heatColors": [
+            "#00105c",
+            "#00d8ff",
+            "#a7ff00",
+            "#ff1600"
+          ],
+          "coldColors": [
+            "#000000",
+            "#00084c",
+            "#0026b8",
+            "#00a8ff"
+          ]
+        },
+        "cooling": {
+          "visibility": 1,
+          "color": "#65d7ff",
+          "roughness": 0.16
+        },
+        "glass": {
+          "opacity": 0.05999999999999999,
+          "color": "#c8f8ff"
+        },
+        "floor": {
+          "dotSize": 0.025,
+          "dotSpacing": 1.5,
+          "dotOpacity": 0.2
+        },
+        "globalOpacity": {
+          "outsideRack": 1,
+          "rackWithoutGpu": 1,
+          "maskSoftness": 0.14
+        }
+      }
+    }
+  ]
+}
