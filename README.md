@@ -56,6 +56,7 @@ Expected Webflow mount call, after GSAP and ScrollTrigger are loaded:
     publicPath: "https://your-cdn.example/",
     scrollTrigger: {
       sectionSelector: ".therma-scroll-section",
+      markers: true,
       scrub: true
     }
   });

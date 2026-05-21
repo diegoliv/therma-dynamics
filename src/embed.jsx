@@ -109,6 +109,7 @@ function setupScrollTrigger({ config, options, setTime, durationSeconds }) {
       start: scrollConfig.sectionStart || scrollConfig.start || "top top",
       end: scrollConfig.sectionEnd || scrollConfig.end || "bottom top",
       scrub: scrollConfig.scrub ?? true,
+      markers: scrollConfig.markers ?? false,
       invalidateOnRefresh: true,
       onUpdate: (self) => setTime(timelineTimeForSectionProgress(section, self.progress)),
     }));
@@ -126,6 +127,7 @@ function setupScrollTrigger({ config, options, setTime, durationSeconds }) {
     start: scrollConfig.start || "top top",
     end: scrollConfig.end || "bottom bottom",
     scrub: scrollConfig.scrub ?? true,
+    markers: scrollConfig.markers ?? false,
     invalidateOnRefresh: true,
     onUpdate: (self) => setTime(self.progress * durationSeconds),
   });
