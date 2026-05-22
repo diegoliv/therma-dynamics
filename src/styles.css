@@ -78,6 +78,35 @@ button {
   cursor: grabbing;
 }
 
+.therma-performance-overlay {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  gap: 4px 10px;
+  min-width: 154px;
+  padding: 10px 12px;
+  border: 1px solid rgba(216, 232, 236, 0.16);
+  border-radius: 6px;
+  color: rgba(236, 244, 247, 0.72);
+  background: rgba(9, 13, 18, 0.78);
+  font-size: 11px;
+  font-weight: 720;
+  line-height: 1.25;
+  pointer-events: none;
+  backdrop-filter: blur(14px);
+}
+
+.therma-performance-overlay strong {
+  grid-column: 1 / -1;
+  color: #8af8e5;
+  font-size: 17px;
+  font-weight: 820;
+  letter-spacing: 0;
+}
+
 .inspector {
   position: fixed;
   top: 16px;

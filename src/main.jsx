@@ -109,6 +109,7 @@ function App() {
   const [timelineTime, setTimelineTime] = useState(0);
   const [selectedKeyframeId, setSelectedKeyframeId] = useState("start");
   const [scrollSimulationEnabled, setScrollSimulationEnabled] = useState(false);
+  const [performanceOverlayEnabled, setPerformanceOverlayEnabled] = useState(false);
   const [cameraParallaxAmount, setCameraParallaxAmount] = useState(
     initialTimelineConfig.camera?.parallaxAmount ?? DEFAULT_CAMERA_PARALLAX_AMOUNT,
   );
@@ -310,6 +311,9 @@ function App() {
           globalOpacitySettings={globalOpacitySettings}
           cameraParallaxAmount={cameraParallaxAmount}
           animationProgress={animationProgress}
+          performanceOverlay={performanceOverlayEnabled}
+          preserveDrawingBuffer
+          renderSettings={timelineConfig.render}
           onStats={setStats}
         />
       </section>
@@ -349,6 +353,8 @@ function App() {
         setSelectedKeyframeId={setSelectedKeyframeId}
         scrollSimulationEnabled={scrollSimulationEnabled}
         setScrollSimulationEnabled={setScrollSimulationEnabled}
+        performanceOverlayEnabled={performanceOverlayEnabled}
+        setPerformanceOverlayEnabled={setPerformanceOverlayEnabled}
         cameraParallaxAmount={cameraParallaxAmount}
         setCameraParallaxAmount={setCameraParallaxAmount}
         captureTimelineState={captureTimelineState}

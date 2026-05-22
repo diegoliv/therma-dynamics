@@ -54,6 +54,8 @@ export const DEFAULT_CAMERA_NEAR = 0.01;
 export const DEFAULT_CAMERA_FAR = 2000;
 export const DEFAULT_CAMERA_PARALLAX_AMOUNT = 0.035;
 export const DEFAULT_CAMERA_PARALLAX_FOCUS_DISTANCE = 40;
+export const DEFAULT_RENDER_MAX_DPR = 1.5;
+export const DEFAULT_RENDER_MIN_DPR = 1;
 export const DEFAULT_GLOBAL_LIGHT_SETTINGS = {
   ambientColor: "#ffffff",
   ambientIntensity: 1.2,

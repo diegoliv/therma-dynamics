@@ -64,6 +64,27 @@ Expected Webflow mount call, after GSAP and ScrollTrigger are loaded:
 </script>
 ```
 
+For performance checks in Webflow, temporarily enable the built-in overlay:
+
+```js
+const therma = window.ThermaDynamics.mount({
+  container: "#therma-dynamics-host",
+  configUrl: "https://your-cdn.example/therma-dynamics-timeline.json",
+  publicPath: "https://your-cdn.example/",
+  performanceOverlay: true,
+  render: {
+    maxDpr: 1.5
+  }
+});
+
+window.addEventListener("therma-dynamics:performance", (event) => {
+  console.log(event.detail);
+});
+```
+
+You can also append `?thermaPerf=1` to the page URL to show the overlay without
+changing the mount call.
+
 ## How it works
 
 - `src/main.jsx` contains the R3F scene, GLB loading, OrbitControls, GSAP/Lenis scroll progress, and custom GLSL shaders.

@@ -1,4 +1,9 @@
-import { DEFAULT_CAMERA_PARALLAX_AMOUNT, MODEL_URL } from "../app/config.js";
+import {
+  DEFAULT_CAMERA_PARALLAX_AMOUNT,
+  DEFAULT_RENDER_MAX_DPR,
+  DEFAULT_RENDER_MIN_DPR,
+  MODEL_URL,
+} from "../app/config.js";
 import { createDefaultExperienceState, deepMerge } from "./experienceState.js";
 import { createDefaultScrollSections } from "./scrollSections.js";
 
@@ -15,6 +20,10 @@ export function createDefaultTimelineConfig() {
     },
     camera: {
       parallaxAmount: DEFAULT_CAMERA_PARALLAX_AMOUNT,
+    },
+    render: {
+      minDpr: DEFAULT_RENDER_MIN_DPR,
+      maxDpr: DEFAULT_RENDER_MAX_DPR,
     },
     scroll: {
       scrub: true,

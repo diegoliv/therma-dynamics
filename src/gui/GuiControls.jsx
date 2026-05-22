@@ -25,6 +25,8 @@ export function GuiControls({
   setSelectedKeyframeId,
   scrollSimulationEnabled,
   setScrollSimulationEnabled,
+  performanceOverlayEnabled,
+  setPerformanceOverlayEnabled,
   cameraParallaxAmount,
   setCameraParallaxAmount,
   captureTimelineState,
@@ -94,6 +96,7 @@ export function GuiControls({
       globalMaskSoftness: globalOpacitySettings.maskSoftness,
       timelineTime,
       scrollSimulationEnabled,
+      performanceOverlayEnabled,
       cameraParallaxAmount,
       selectedKeyframeId: selectedKeyframeId || "",
       captureTimelineState,
@@ -248,6 +251,10 @@ export function GuiControls({
         .name("Scroll simulation")
         .onChange(setScrollSimulationEnabled);
       animationFolder
+        .add(controls, "performanceOverlayEnabled")
+        .name("Performance overlay")
+        .onChange(setPerformanceOverlayEnabled);
+      animationFolder
         .add(controls, "cameraParallaxAmount", 0, 0.24, 0.001)
         .name("Camera parallax")
         .onChange(setCameraParallaxAmount);
@@ -320,6 +327,7 @@ export function GuiControls({
     controls.globalMaskSoftness = globalOpacitySettings.maskSoftness;
     controls.timelineTime = timelineTime;
     controls.scrollSimulationEnabled = scrollSimulationEnabled;
+    controls.performanceOverlayEnabled = performanceOverlayEnabled;
     controls.cameraParallaxAmount = cameraParallaxAmount;
     controls.selectedKeyframeId = selectedKeyframeId || "";
     controls.captureTimelineState = captureTimelineState;
@@ -337,8 +345,10 @@ export function GuiControls({
     glassSettings,
     globalOpacitySettings,
     orbitEnabled,
+    performanceOverlayEnabled,
     scrollSimulationEnabled,
     setCameraParallaxAmount,
+    setPerformanceOverlayEnabled,
     selectedKeyframeId,
     thermalSettings,
     timelineTime,

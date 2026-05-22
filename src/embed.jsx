@@ -10,9 +10,16 @@ import {
   timelineTimeForSectionProgress,
 } from "./timeline/scrollSections.js";
 
-const EMBED_VERSION = "2026-05-21.2";
+const EMBED_VERSION = "2026-05-22.1";
 
-function EmbedApp({ config, modelUrl, onReady }) {
+function EmbedApp({
+  config,
+  modelUrl,
+  onPerformanceUpdate,
+  onReady,
+  performanceOverlay,
+  renderSettings,
+}) {
   const [timelineTime, setTimelineTime] = useState(0);
   const durationSeconds = Math.max(config.durationSeconds ?? 1, 0.0001);
   const animationProgress = timelineTime / durationSeconds;
@@ -42,6 +49,9 @@ function EmbedApp({ config, modelUrl, onReady }) {
       globalOpacitySettings={props.globalOpacitySettings}
       cameraParallaxAmount={config.camera?.parallaxAmount}
       animationProgress={animationProgress}
+      performanceOverlay={performanceOverlay}
+      renderSettings={renderSettings}
+      onPerformanceUpdate={onPerformanceUpdate}
       onStats={() => {}}
     />
   );
@@ -156,6 +166,7 @@ export function mount(options = {}) {
   let setTime = null;
   let pendingTime = null;
   let isDestroyed = false;
+  let latestPerformance = null;
 
   const instance = {
     setTime(time) {
@@ -164,6 +175,9 @@ export function mount(options = {}) {
         return;
       }
       pendingTime = time;
+    },
+    getPerformance() {
+      return latestPerformance;
     },
     destroy() {
       isDestroyed = true;
@@ -177,10 +191,28 @@ export function mount(options = {}) {
       if (isDestroyed) return;
       const publicPath = options.publicPath ?? config.publicPath;
       const modelUrl = resolveAssetUrl(config.source?.modelUrl, publicPath);
+      const performanceOverlay = Boolean(
+        options.performanceOverlay
+          ?? config.performance?.overlay
+          ?? new URLSearchParams(window.location.search).has("thermaPerf"),
+      );
+      const renderSettings = {
+        ...(config.render ?? {}),
+        ...(options.render ?? {}),
+      };
       root.render(
         <EmbedApp
           config={config}
           modelUrl={modelUrl}
+          performanceOverlay={performanceOverlay}
+          renderSettings={renderSettings}
+          onPerformanceUpdate={(stats) => {
+            latestPerformance = stats;
+            options.onPerformanceUpdate?.(stats);
+            window.dispatchEvent(new CustomEvent("therma-dynamics:performance", {
+              detail: stats,
+            }));
+          }}
           onReady={({ durationSeconds, setTime: setTimelineTime }) => {
             setTime = setTimelineTime;
             if (pendingTime !== null) {
