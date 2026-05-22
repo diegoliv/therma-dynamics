@@ -44,6 +44,13 @@ export function createDebugPreviewMaterials() {
   };
 }
 
+function withCollectionNames(material, collections) {
+  if (material) {
+    material.userData.collectionNames = collections;
+  }
+  return material;
+}
+
 export function createPreviewMaterialForNode(node) {
   const originalMaterial = node.material;
   const opacityBucket = getOpacityBucket(node);
@@ -53,7 +60,7 @@ export function createPreviewMaterialForNode(node) {
       ? sourceByName(originalMaterial, "heat")
       : originalMaterial;
     return {
-      material: createInvisibleHeatMaterial(sourceMaterial),
+      material: withCollectionNames(createInvisibleHeatMaterial(sourceMaterial), []),
       heatObject: node,
       renderOrder: -1,
       collections: [],
@@ -63,6 +70,7 @@ export function createPreviewMaterialForNode(node) {
   if (isFloorMaterial(originalMaterial)) {
     const material = createFloorMaterial(sourceByName(originalMaterial, "floor"));
     material.userData.opacityBucket = opacityBucket;
+    material.userData.collectionNames = ["floor"];
     return {
       material,
       renderOrder: 0,
@@ -78,6 +86,7 @@ export function createPreviewMaterialForNode(node) {
     material.userData.opacityBucket = opacityBucket;
     material.userData.renderNode = node;
     material.userData.heatInfluenceNode = getRackInfluenceNode(node);
+    material.userData.collectionNames = USE_COOLING_SHADER_FOR_THERMAL_TEST ? ["opacity"] : ["thermal", "opacity"];
     return {
       material,
       renderOrder: 1,
@@ -91,6 +100,7 @@ export function createPreviewMaterialForNode(node) {
       : originalMaterial;
     const material = createCoolingMaterial(sourceMaterial);
     material.userData.opacityBucket = opacityBucket;
+    material.userData.collectionNames = ["cooling", "opacity"];
     return {
       material,
       renderOrder: 2,
@@ -101,6 +111,7 @@ export function createPreviewMaterialForNode(node) {
   if (isGlassMaterial(originalMaterial)) {
     const material = createGlassMaterial(sourceByName(originalMaterial, "glass"));
     material.userData.opacityBucket = opacityBucket;
+    material.userData.collectionNames = ["glass", "opacity"];
     return {
       material,
       renderOrder: 4,
@@ -109,6 +120,9 @@ export function createPreviewMaterialForNode(node) {
   }
 
   const material = cloneOpacityMaterial(originalMaterial, opacityBucket);
+  if (material) {
+    material.userData.collectionNames = ["opacity"];
+  }
   return {
     material,
     renderOrder: node.renderOrder,

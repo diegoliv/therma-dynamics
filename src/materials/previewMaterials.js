@@ -250,6 +250,8 @@ export function createThermalMaterial(sourceMaterial, geometry) {
       uGlobalOpacity: { value: 1 },
       uGlobalMaskSoftness: { value: DEFAULT_GLOBAL_MASK_SOFTNESS },
       uHeatFalloff: { value: DEFAULT_HEAT_FALLOFF },
+      uHeatCenter: { value: new THREE.Vector3() },
+      uHeatHalfSize: { value: new THREE.Vector3(0.0001, 0.0001, 0.0001) },
       uBaseColor: { value: getMaterialBaseColor(sourceMaterial) },
       uBoxCenter: { value: box.getCenter(new THREE.Vector3()) },
       uBoxHalfSize: { value: box.getSize(new THREE.Vector3()).multiplyScalar(0.5) },

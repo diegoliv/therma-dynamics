@@ -1,6 +1,7 @@
 import { createMaterialCollections, registerMaterial } from "../materials/materialCollections.js";
 import { createDebugPreviewMaterials, createPreviewMaterialForNode } from "../materials/materialRegistry.js";
 import { createAnimationTimeline } from "./animationTimeline.js";
+import { optimizeRepeatedMeshes } from "./optimizeRepeatedMeshes.js";
 import { collectSceneStats } from "./sceneStats.js";
 
 export function preparePreviewScene(gltf) {
@@ -38,6 +39,7 @@ export function preparePreviewScene(gltf) {
     };
   });
 
+  const instancingStats = optimizeRepeatedMeshes(scene, materials);
   const timeline = createAnimationTimeline(scene, gltf.animations);
 
   return {
@@ -45,7 +47,7 @@ export function preparePreviewScene(gltf) {
     materials,
     scene,
     sourceCamera,
-    stats: { ...sceneStats, animationDuration: timeline.duration },
+    stats: { ...sceneStats, animationDuration: timeline.duration, instancing: instancingStats },
     timeline,
   };
 }

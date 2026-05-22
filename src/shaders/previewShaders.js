@@ -42,6 +42,8 @@ export const thermalFragmentShader = `
   uniform float uGlobalOpacity;
   uniform float uGlobalMaskSoftness;
   uniform float uHeatFalloff;
+  uniform vec3 uHeatCenter;
+  uniform vec3 uHeatHalfSize;
   uniform vec3 uBaseColor;
   uniform vec3 uBoxCenter;
   uniform vec3 uBoxHalfSize;
@@ -106,13 +108,26 @@ export const thermalFragmentShader = `
     return color;
   }
 
-  float thermalResponse(float t, vec3 noisePosition) {
+  float getThermalState() {
+    vec3 q = abs(vWorldPosition - uHeatCenter) - max(uHeatHalfSize, vec3(0.0001));
+    vec3 outside = max(q, vec3(0.0));
+    float outsideDistance = length(outside);
+    bool inside = max(max(q.x, q.y), q.z) <= 0.0;
+    if (inside) return 1.0;
+
+    float falloff = max(uHeatFalloff, 0.0001);
+    float t = clamp(outsideDistance / falloff, 0.0, 1.0);
+    float heatSmooth = t * t * (3.0 - 2.0 * t);
+    return 1.0 - heatSmooth;
+  }
+
+  float thermalResponse(float t, vec3 noisePosition, float thermalState) {
     float broadNoise = valueNoise(noisePosition * 8.0 + vec3(0.0, uTime * 0.05, 0.0));
     float fineNoise = hash(floor(noisePosition * 145.0 + uTime * 3.0));
     float sensorNoise = (broadNoise - 0.5) * uThermalNoise + (fineNoise - 0.5) * uThermalNoise * 0.58;
     t = clamp(t + sensorNoise, 0.0, 1.0);
     t = clamp((t - 0.5) * uThermalContrast + 0.5, 0.0, 1.0);
-    t = pow(t, mix(1.16, 0.72, uThermalState));
+    t = pow(t, mix(1.16, 0.72, thermalState));
 
     float bands = 28.0;
     float banded = floor(t * bands) / bands;
@@ -165,6 +180,7 @@ export const thermalFragmentShader = `
     }
 
     vec3 worldNormal = normalize(vWorldNormal);
+    float thermalState = getThermalState();
     vec3 viewDirection = normalize(uCameraPosition - vWorldPosition);
     vec3 lightDirection = normalize(vec3(-0.35, 0.62, 0.7));
 
@@ -174,13 +190,13 @@ export const thermalFragmentShader = `
     float internalPulse = 0.045 * sin(uTime * 1.4 + vObjectPosition.x * 2.2 + vObjectPosition.y * 1.7);
     float surfaceNoise = valueNoise(vWorldPosition * 3.35 + vec3(1.7, uTime * 0.025, 4.2));
     float speckle = hash(floor(vWorldPosition * 78.0));
-    float edgeHeat = edgeMask * uHotEdge * (0.34 + uThermalState * 0.66);
+    float edgeHeat = edgeMask * uHotEdge * (0.34 + thermalState * 0.66);
     float thermalAmount = clamp(faceCore + internalPulse * faceCore + edgeHeat, 0.0, 1.0);
     thermalAmount = clamp(thermalAmount + (surfaceNoise - 0.5) * 0.13 + (speckle - 0.5) * 0.035, 0.0, 1.0);
-    thermalAmount = thermalResponse(thermalAmount, vWorldPosition);
+    thermalAmount = thermalResponse(thermalAmount, vWorldPosition, thermalState);
     float centerHeat = pow(thermalAmount, 0.45);
     float centerCold = pow(thermalAmount, 0.58);
-    vec3 thermalColor = mix(sampleCold(centerCold), sampleHeat(centerHeat), uThermalState);
+    vec3 thermalColor = mix(sampleCold(centerCold), sampleHeat(centerHeat), thermalState);
 
     float diffuse = max(dot(worldNormal, lightDirection), 0.0);
     float fresnel = pow(1.0 - max(dot(worldNormal, viewDirection), 0.0), 2.4);
@@ -191,7 +207,7 @@ export const thermalFragmentShader = `
     vec3 color = mix(edgeColor, thermalColor, coreMix);
     color += thermalColor * thermalAmount * 0.28;
     color += sampleHeat(0.86) * edgeMask * thermalAmount * uHotEdge * 0.36;
-    color += mix(uColdColors[2], uHeatColors[2], uThermalState) * fresnel * 0.22;
+    color += mix(uColdColors[2], uHeatColors[2], thermalState) * fresnel * 0.22;
     float hotRadiance = smoothstep(0.58, 1.0, thermalAmount);
     color += thermalColor * hotRadiance * uThermalRadiance;
     color += sampleHeat(1.0) * edgeMask * hotRadiance * uThermalRadiance * 0.55;

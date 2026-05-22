@@ -25,6 +25,8 @@ export function updateThermalMaterials({
     material.uniforms.uGlobalOpacity.value = visibility;
     material.uniforms.uGlobalMaskSoftness.value = globalOpacitySettings.maskSoftness;
     material.uniforms.uHeatFalloff.value = thermalSettings.heatFalloff;
+    material.uniforms.uHeatCenter.value.copy(heatBounds.center);
+    material.uniforms.uHeatHalfSize.value.copy(heatBounds.halfSize);
     material.uniforms.uThermalState.value = heatInfluenceForNode(
       material.userData.heatInfluenceNode ?? material.userData.renderNode,
       heatObject,
