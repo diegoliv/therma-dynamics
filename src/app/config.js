@@ -52,6 +52,8 @@ export const DEFAULT_DOF_SETTINGS = {
 export const USE_COOLING_SHADER_FOR_THERMAL_TEST = false;
 export const DEFAULT_CAMERA_NEAR = 0.01;
 export const DEFAULT_CAMERA_FAR = 2000;
+export const DEFAULT_CAMERA_PARALLAX_AMOUNT = 0.035;
+export const DEFAULT_CAMERA_PARALLAX_FOCUS_DISTANCE = 40;
 export const DEFAULT_GLOBAL_LIGHT_SETTINGS = {
   ambientColor: "#ffffff",
   ambientIntensity: 1.2,

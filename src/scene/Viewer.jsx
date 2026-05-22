@@ -18,6 +18,7 @@ function SceneContent({
   floorSettings,
   globalOpacitySettings,
   animationProgress,
+  cameraParallaxAmount,
   modelUrl = MODEL_URL,
   onStats,
 }) {
@@ -46,6 +47,7 @@ function SceneContent({
           floorSettings={floorSettings}
           globalOpacitySettings={globalOpacitySettings}
           animationProgress={animationProgress}
+          cameraParallaxAmount={cameraParallaxAmount}
           onStats={onStats}
         />
       </Suspense>

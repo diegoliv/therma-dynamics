@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
-import { SHOW_INSPECTOR_PANEL } from "./app/config.js";
+import { DEFAULT_CAMERA_PARALLAX_AMOUNT, SHOW_INSPECTOR_PANEL } from "./app/config.js";
 import {
   DEFAULT_BACKGROUND_COLOR,
   DEFAULT_DOF_SETTINGS,
@@ -32,8 +32,13 @@ function downloadJson(filename, data) {
   const link = document.createElement("a");
   link.href = url;
   link.download = filename;
+  link.style.display = "none";
+  document.body.appendChild(link);
   link.click();
-  URL.revokeObjectURL(url);
+  window.setTimeout(() => {
+    URL.revokeObjectURL(url);
+    link.remove();
+  }, 0);
 }
 
 const TIMELINE_ENDPOINT_EPSILON = 0.0005;
@@ -96,13 +101,17 @@ function upsertTimelineKeyframe(config, keyframe) {
 }
 
 function App() {
+  const initialTimelineConfig = useMemo(() => createDefaultTimelineConfig(), []);
   const [stats, setStats] = useState(null);
   const [orbitEnabled, setOrbitEnabled] = useState(false);
   const [isInspectorCollapsed, setIsInspectorCollapsed] = useState(false);
-  const [timelineConfig, setTimelineConfig] = useState(createDefaultTimelineConfig);
+  const [timelineConfig, setTimelineConfig] = useState(initialTimelineConfig);
   const [timelineTime, setTimelineTime] = useState(0);
   const [selectedKeyframeId, setSelectedKeyframeId] = useState("start");
   const [scrollSimulationEnabled, setScrollSimulationEnabled] = useState(false);
+  const [cameraParallaxAmount, setCameraParallaxAmount] = useState(
+    initialTimelineConfig.camera?.parallaxAmount ?? DEFAULT_CAMERA_PARALLAX_AMOUNT,
+  );
   const [backgroundColor, setBackgroundColor] = useState(DEFAULT_BACKGROUND_COLOR);
   const [dofSettings, setDofSettings] = useState(DEFAULT_DOF_SETTINGS);
   const [thermalSettings, setThermalSettings] = useState(createDefaultThermalSettings);
@@ -260,9 +269,16 @@ function App() {
   }, [selectedKeyframeId, timelineConfig.keyframes]);
 
   const exportTimelineConfig = useCallback(() => {
-    downloadJson("therma-dynamics-timeline.json", timelineConfig);
-    window.THERMADYNAMICS_TIMELINE_STATE = timelineConfig;
-  }, [timelineConfig]);
+    const exportedConfig = {
+      ...timelineConfig,
+      camera: {
+        ...(timelineConfig.camera ?? {}),
+        parallaxAmount: cameraParallaxAmount,
+      },
+    };
+    downloadJson("therma-dynamics-timeline.json", exportedConfig);
+    window.THERMADYNAMICS_TIMELINE_STATE = exportedConfig;
+  }, [cameraParallaxAmount, timelineConfig]);
 
   const importTimelineConfig = useCallback(() => {
     const input = document.createElement("input");
@@ -273,6 +289,7 @@ function App() {
       if (!file) return;
       const importedConfig = normalizeTimelineConfig(JSON.parse(await file.text()));
       setTimelineConfig(importedConfig);
+      setCameraParallaxAmount(importedConfig.camera?.parallaxAmount ?? DEFAULT_CAMERA_PARALLAX_AMOUNT);
       setTimelineTime(0);
       setSelectedKeyframeId(importedConfig.keyframes?.[0]?.id ?? null);
     }, { once: true });
@@ -291,6 +308,7 @@ function App() {
           glassSettings={glassSettings}
           floorSettings={floorSettings}
           globalOpacitySettings={globalOpacitySettings}
+          cameraParallaxAmount={cameraParallaxAmount}
           animationProgress={animationProgress}
           onStats={setStats}
         />
@@ -331,6 +349,8 @@ function App() {
         setSelectedKeyframeId={setSelectedKeyframeId}
         scrollSimulationEnabled={scrollSimulationEnabled}
         setScrollSimulationEnabled={setScrollSimulationEnabled}
+        cameraParallaxAmount={cameraParallaxAmount}
+        setCameraParallaxAmount={setCameraParallaxAmount}
         captureTimelineState={captureTimelineState}
         updateTimelineState={updateTimelineState}
         deleteTimelineState={deleteTimelineState}

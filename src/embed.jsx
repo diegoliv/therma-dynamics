@@ -40,6 +40,7 @@ function EmbedApp({ config, modelUrl, onReady }) {
       glassSettings={props.glassSettings}
       floorSettings={props.floorSettings}
       globalOpacitySettings={props.globalOpacitySettings}
+      cameraParallaxAmount={config.camera?.parallaxAmount}
       animationProgress={animationProgress}
       onStats={() => {}}
     />

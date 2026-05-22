@@ -18,13 +18,16 @@ export function Model({
   floorSettings,
   globalOpacitySettings,
   animationProgress,
+  cameraParallaxAmount,
   onStats,
 }) {
   const gltf = useLoader(GLTFLoader, modelUrl);
   const groupRef = useRef();
   const boundsRef = useRef(new THREE.Vector3());
-  const { camera } = useThree();
+  const { camera, gl } = useThree();
   const heatBoundsRef = useRef(createHeatBounds());
+  const targetPointerRef = useRef(new THREE.Vector2());
+  const smoothedPointerRef = useRef(new THREE.Vector2());
 
   const previewScene = useMemo(() => preparePreviewScene(gltf), [gltf]);
   const { scene, stats } = previewScene;
@@ -39,11 +42,38 @@ export function Model({
     fitCameraToObject(camera, groupRef.current, boundsRef);
   }, [camera, previewScene.sourceCamera, scene]);
 
+  useEffect(() => {
+    const updatePointer = (event) => {
+      const rect = gl.domElement.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      const y = -(((event.clientY - rect.top) / rect.height) * 2 - 1);
+      targetPointerRef.current.set(
+        THREE.MathUtils.clamp(x, -1, 1),
+        THREE.MathUtils.clamp(y, -1, 1),
+      );
+    };
+
+    const resetPointer = () => {
+      targetPointerRef.current.set(0, 0);
+    };
+
+    window.addEventListener("pointermove", updatePointer);
+    window.addEventListener("pointerleave", resetPointer);
+    return () => {
+      window.removeEventListener("pointermove", updatePointer);
+      window.removeEventListener("pointerleave", resetPointer);
+    };
+  }, [gl]);
+
   useFrame((_, delta) => {
+    smoothedPointerRef.current.lerp(targetPointerRef.current, 1 - Math.exp(-delta * 8));
     updateAnimationTimeline(previewScene.timeline, animationProgress);
     updateSourceCamera({
       camera,
       orbitEnabled,
+      pointer: smoothedPointerRef.current,
+      parallaxAmount: cameraParallaxAmount,
       sourceCamera: previewScene.sourceCamera,
     });
     updatePreviewFrame({

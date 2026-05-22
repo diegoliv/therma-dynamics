@@ -5,11 +5,40 @@
   "source": {
     "modelUrl": "/models/therma_dynamics_v2.glb"
   },
+  "camera": {
+    "parallaxAmount": 0.005
+  },
   "scroll": {
-    "sectionCount": 9,
     "scrub": true,
     "triggerSelector": ".therma-scroll-page",
-    "sectionSelector": ".therma-scroll-section"
+    "sectionSelector": ".therma-scroll-section",
+    "sections": [
+      {
+        "id": "intro",
+        "heightVh": 100,
+        "from": 0,
+        "to": 1.5
+      },
+      {
+        "id": "thermal-build",
+        "heightVh": 200,
+        "from": 1.5,
+        "to": 4
+      },
+      {
+        "id": "airflow",
+        "heightVh": 150,
+        "from": 4,
+        "to": 6
+      },
+      {
+        "id": "final",
+        "heightVh": 200,
+        "from": 6,
+        "to": 9
+      }
+    ],
+    "sectionCount": 9
   },
   "defaults": {
     "backgroundColor": "#080b0f",

@@ -25,6 +25,8 @@ export function GuiControls({
   setSelectedKeyframeId,
   scrollSimulationEnabled,
   setScrollSimulationEnabled,
+  cameraParallaxAmount,
+  setCameraParallaxAmount,
   captureTimelineState,
   updateTimelineState,
   deleteTimelineState,
@@ -55,8 +57,13 @@ export function GuiControls({
           const link = document.createElement("a");
           link.href = url;
           link.download = `therma-canvas-${new Date().toISOString().replace(/[:.]/g, "-")}.png`;
+          link.style.display = "none";
+          document.body.appendChild(link);
           link.click();
-          URL.revokeObjectURL(url);
+          window.setTimeout(() => {
+            URL.revokeObjectURL(url);
+            link.remove();
+          }, 0);
         }, "image/png");
       },
       gradientSoftness: thermalSettings.gradientSoftness,
@@ -87,6 +94,7 @@ export function GuiControls({
       globalMaskSoftness: globalOpacitySettings.maskSoftness,
       timelineTime,
       scrollSimulationEnabled,
+      cameraParallaxAmount,
       selectedKeyframeId: selectedKeyframeId || "",
       captureTimelineState,
       updateTimelineState,
@@ -239,6 +247,10 @@ export function GuiControls({
         .add(controls, "scrollSimulationEnabled")
         .name("Scroll simulation")
         .onChange(setScrollSimulationEnabled);
+      animationFolder
+        .add(controls, "cameraParallaxAmount", 0, 0.24, 0.001)
+        .name("Camera parallax")
+        .onChange(setCameraParallaxAmount);
       animationFolder.add(controls, "captureTimelineState").name("Capture current state");
       animationFolder.add(controls, "updateTimelineState").name("Update selected state");
       animationFolder.add(controls, "deleteTimelineState").name("Delete selected state");
@@ -308,6 +320,7 @@ export function GuiControls({
     controls.globalMaskSoftness = globalOpacitySettings.maskSoftness;
     controls.timelineTime = timelineTime;
     controls.scrollSimulationEnabled = scrollSimulationEnabled;
+    controls.cameraParallaxAmount = cameraParallaxAmount;
     controls.selectedKeyframeId = selectedKeyframeId || "";
     controls.captureTimelineState = captureTimelineState;
     controls.updateTimelineState = updateTimelineState;
@@ -317,6 +330,7 @@ export function GuiControls({
     controllersRef.current.forEach((controller) => controller.updateDisplay());
   }, [
     backgroundColor,
+    cameraParallaxAmount,
     coolingSettings,
     dofSettings,
     floorSettings,
@@ -324,6 +338,7 @@ export function GuiControls({
     globalOpacitySettings,
     orbitEnabled,
     scrollSimulationEnabled,
+    setCameraParallaxAmount,
     selectedKeyframeId,
     thermalSettings,
     timelineTime,
