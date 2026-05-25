@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
 import {
@@ -106,6 +106,15 @@ function upsertTimelineKeyframe(config, keyframe) {
   };
 }
 
+function removeDofEnabledFromState(state) {
+  if (!state?.dof || state.dof.enabled === undefined) return state;
+  const { enabled, ...dofWithoutEnabled } = state.dof;
+  return {
+    ...state,
+    dof: dofWithoutEnabled,
+  };
+}
+
 function App() {
   const initialTimelineConfig = useMemo(() => createDefaultTimelineConfig(), []);
   const [stats, setStats] = useState(null);
@@ -156,6 +165,11 @@ function App() {
     globalOpacitySettings,
     thermalSettings,
   ]);
+  const currentExperienceStateRef = useRef(currentExperienceState);
+
+  useEffect(() => {
+    currentExperienceStateRef.current = currentExperienceState;
+  }, [currentExperienceState]);
 
   const applyExperienceState = useCallback((state) => {
     const props = stateToProps(state);
@@ -166,6 +180,24 @@ function App() {
     setGlassSettings(props.glassSettings);
     setFloorSettings(props.floorSettings);
     setGlobalOpacitySettings(props.globalOpacitySettings);
+  }, []);
+
+  const updateDofSettings = useCallback((nextDofSettings) => {
+    const nextDof = cloneValue(nextDofSettings);
+    setDofSettings(nextDof);
+    setTimelineConfig((config) => {
+      if (Boolean(config.defaults?.dof?.enabled) === Boolean(nextDof.enabled)) return config;
+      return {
+        ...config,
+        defaults: {
+          ...(config.defaults ?? {}),
+          dof: {
+            ...(config.defaults?.dof ?? DEFAULT_DOF_SETTINGS),
+            enabled: Boolean(nextDof.enabled),
+          },
+        },
+      };
+    });
   }, []);
 
   useEffect(() => {
@@ -248,7 +280,7 @@ function App() {
   }, [durationSeconds, scrollSimulationEnabled]);
 
   const captureTimelineState = useCallback(() => {
-    const state = cloneValue(currentExperienceState);
+    const state = removeDofEnabledFromState(cloneValue(currentExperienceStateRef.current));
     const selectedId = keyframeIdForTimelineTime(effectiveTimelineConfig, timelineTime);
 
     setTimelineConfig((config) => {
@@ -264,11 +296,11 @@ function App() {
       return keyframeId === "end" ? nextConfig : syncEndToLastTimelineState({ ...nextConfig, durationSeconds });
     });
     setSelectedKeyframeId(selectedId);
-  }, [currentExperienceState, durationSeconds, effectiveTimelineConfig, timelineTime]);
+  }, [durationSeconds, effectiveTimelineConfig, timelineTime]);
 
   const updateTimelineState = useCallback(() => {
     if (!selectedKeyframeId) return;
-    const state = cloneValue(currentExperienceState);
+    const state = removeDofEnabledFromState(cloneValue(currentExperienceStateRef.current));
     const idAtCurrentTime = keyframeIdForTimelineTime(effectiveTimelineConfig, timelineTime);
     const id = idAtCurrentTime === "start" || idAtCurrentTime === "end"
       ? idAtCurrentTime
@@ -285,7 +317,7 @@ function App() {
       return id === "end" ? nextConfig : syncEndToLastTimelineState({ ...nextConfig, durationSeconds });
     });
     setSelectedKeyframeId(id);
-  }, [currentExperienceState, durationSeconds, effectiveTimelineConfig, selectedKeyframeId, timelineTime]);
+  }, [durationSeconds, effectiveTimelineConfig, selectedKeyframeId, timelineTime]);
 
   const deleteTimelineState = useCallback(() => {
     if (!selectedKeyframeId || selectedKeyframeId === "start" || selectedKeyframeId === "end") return;
@@ -372,7 +404,7 @@ function App() {
         backgroundColor={backgroundColor}
         setBackgroundColor={setBackgroundColor}
         dofSettings={dofSettings}
-        setDofSettings={setDofSettings}
+        setDofSettings={updateDofSettings}
         thermalSettings={thermalSettings}
         setThermalSettings={setThermalSettings}
         coolingSettings={coolingSettings}

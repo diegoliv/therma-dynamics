@@ -1,6 +1,17 @@
 import { useEffect, useRef } from "react";
 import { DEFAULT_HEAT_FALLOFF, THERMAL_PRESETS } from "../app/config.js";
 
+const DOF_APERTURE_MAX = 0.018;
+const DOF_MAXBLUR_MAX = 0.032;
+
+function clampDofControlValues(settings) {
+  return {
+    ...settings,
+    aperture: Math.min(settings.aperture, DOF_APERTURE_MAX),
+    maxblur: Math.min(settings.maxblur, DOF_MAXBLUR_MAX),
+  };
+}
+
 export function GuiControls({
   orbitEnabled,
   setOrbitEnabled,
@@ -47,13 +58,14 @@ export function GuiControls({
     let isDisposed = false;
     controllersRef.current = [];
 
+    const initialDofSettings = clampDofControlValues(dofSettings);
     const controls = {
       orbitEnabled,
       backgroundColor,
-      dofEnabled: dofSettings.enabled,
-      dofFocus: dofSettings.focus,
-      dofAperture: dofSettings.aperture,
-      dofMaxblur: dofSettings.maxblur,
+      dofEnabled: initialDofSettings.enabled,
+      dofFocus: initialDofSettings.focus,
+      dofAperture: initialDofSettings.aperture,
+      dofMaxblur: initialDofSettings.maxblur,
       exportPng: () => {
         const canvas = document.querySelector(".stage canvas");
         if (!canvas) return;
@@ -176,6 +188,8 @@ export function GuiControls({
     };
 
     const syncDofSettings = () => {
+      controls.dofAperture = Math.min(controls.dofAperture, DOF_APERTURE_MAX);
+      controls.dofMaxblur = Math.min(controls.dofMaxblur, DOF_MAXBLUR_MAX);
       setDofSettings({
         enabled: controls.dofEnabled,
         focus: controls.dofFocus,
@@ -196,8 +210,8 @@ export function GuiControls({
       const dofFolder = gui.addFolder("Depth of field");
       dofFolder.add(controls, "dofEnabled").name("Enabled").onChange(syncDofSettings);
       dofFolder.add(controls, "dofFocus", 0.1, 300, 0.5).name("Focus").onChange(syncDofSettings);
-      dofFolder.add(controls, "dofAperture", 0.0001, 0.08, 0.0005).name("Aperture").onChange(syncDofSettings);
-      dofFolder.add(controls, "dofMaxblur", 0.0001, 0.08, 0.0005).name("Max blur").onChange(syncDofSettings);
+      dofFolder.add(controls, "dofAperture", 0.0001, DOF_APERTURE_MAX, 0.0001).name("Aperture").onChange(syncDofSettings);
+      dofFolder.add(controls, "dofMaxblur", 0.0001, DOF_MAXBLUR_MAX, 0.0001).name("Max blur").onChange(syncDofSettings);
 
       const thermalFolder = gui.addFolder("Thermal shader");
       thermalFolder.add(controls, "industrialRainbowPreset").name("Preset: industrial rainbow");
@@ -315,10 +329,11 @@ export function GuiControls({
 
     controls.orbitEnabled = orbitEnabled;
     controls.backgroundColor = backgroundColor;
-    controls.dofEnabled = dofSettings.enabled;
-    controls.dofFocus = dofSettings.focus;
-    controls.dofAperture = dofSettings.aperture;
-    controls.dofMaxblur = dofSettings.maxblur;
+    const clampedDofSettings = clampDofControlValues(dofSettings);
+    controls.dofEnabled = clampedDofSettings.enabled;
+    controls.dofFocus = clampedDofSettings.focus;
+    controls.dofAperture = clampedDofSettings.aperture;
+    controls.dofMaxblur = clampedDofSettings.maxblur;
     controls.gradientSoftness = thermalSettings.gradientSoftness;
     controls.thermalRadius = thermalSettings.radius;
     controls.thermalContrast = thermalSettings.contrast;

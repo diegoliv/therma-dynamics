@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "therma-dynamics-webflow-v1",
-  "durationSeconds": "auto",
+  "durationSeconds": 10,
   "source": {
     "modelUrl": "/models/therma_dynamics_v2.glb"
   },
@@ -265,7 +265,6 @@
       "state": {
         "backgroundColor": "#080b0f",
         "dof": {
-          "enabled": false,
           "focus": 40,
           "aperture": 0.018,
           "maxblur": 0.012
@@ -301,7 +300,7 @@
           "color": "#c8f8ff"
         },
         "floor": {
-          "dotSize": 0.2,
+          "dotSize": 0.025,
           "dotSpacing": 1.5,
           "dotOpacity": 0.2
         },

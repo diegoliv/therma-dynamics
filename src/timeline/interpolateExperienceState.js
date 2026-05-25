@@ -44,10 +44,10 @@ export function resolveTimelineState(config, timelineTime) {
   const clampedTime = THREE.MathUtils.clamp(timelineTime, 0, durationSeconds);
   const keyframes = normalizeKeyframes(config.keyframes, durationSeconds);
 
-  if (!keyframes.length) return cloneValue(config.defaults);
+  if (!keyframes.length) return resolveGlobalDofEnabled(config, cloneValue(config.defaults));
 
   const exactKeyframe = findExactKeyframe(keyframes, clampedTime);
-  if (exactKeyframe) return resolveKeyframeState(config.defaults, exactKeyframe);
+  if (exactKeyframe) return resolveGlobalDofEnabled(config, resolveKeyframeState(config.defaults, exactKeyframe));
 
   let previousIndex = 0;
   let nextIndex = keyframes.length - 1;
@@ -64,10 +64,15 @@ export function resolveTimelineState(config, timelineTime) {
   const previousTime = keyframes[previousIndex].time;
   const nextTime = keyframes[nextIndex].time;
 
-  if (previousIndex === nextIndex || nextTime <= previousTime) return previousState;
+  if (previousIndex === nextIndex || nextTime <= previousTime) {
+    return resolveGlobalDofEnabled(config, previousState);
+  }
 
   const rawAmount = (clampedTime - previousTime) / (nextTime - previousTime);
-  return interpolateExperienceState(previousState, nextState, easeAmount(rawAmount, keyframes[previousIndex].easeToNext));
+  return resolveGlobalDofEnabled(
+    config,
+    interpolateExperienceState(previousState, nextState, easeAmount(rawAmount, keyframes[previousIndex].easeToNext)),
+  );
 }
 
 export function normalizeKeyframes(keyframes, durationSeconds) {
@@ -89,6 +94,17 @@ function findExactKeyframe(keyframes, timelineTime) {
 
 function resolveKeyframeState(defaults, keyframe) {
   return deepMerge(cloneValue(defaults), keyframe.state);
+}
+
+function resolveGlobalDofEnabled(config, state) {
+  if (!state?.dof || config.defaults?.dof?.enabled === undefined) return state;
+  return {
+    ...state,
+    dof: {
+      ...state.dof,
+      enabled: Boolean(config.defaults.dof.enabled),
+    },
+  };
 }
 
 function easeAmount(amount, easeName) {
