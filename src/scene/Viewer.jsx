@@ -53,6 +53,7 @@ function SceneContent({
   modelUrl = MODEL_URL,
   performanceMonitoring,
   onPerformanceUpdate,
+  onReady,
   onStats,
 }) {
   return (
@@ -82,6 +83,7 @@ function SceneContent({
           animationProgress={animationProgress}
           cameraParallaxAmount={cameraParallaxAmount}
           onStats={onStats}
+          onReady={onReady}
         />
       </Suspense>
       <BokehDepthOfField settings={dofSettings} />
@@ -104,6 +106,7 @@ export function Viewer({
   preserveDrawingBuffer = false,
   renderSettings,
   onPerformanceUpdate,
+  onReady,
   ...props
 }) {
   const canvasRef = useRef(null);
@@ -149,9 +152,10 @@ export function Viewer({
         {...props}
         performanceMonitoring={performanceOverlay || Boolean(onPerformanceUpdate)}
         onPerformanceUpdate={handlePerformanceUpdate}
+        onReady={onReady}
       />,
     );
-  }, [isConfigured, props, performanceOverlay, onPerformanceUpdate]);
+  }, [isConfigured, props, performanceOverlay, onPerformanceUpdate, onReady]);
 
   return (
     <>

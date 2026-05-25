@@ -9,6 +9,24 @@ import { preparePreviewScene } from "../model/preparePreviewScene.js";
 import { fitCameraToObject } from "../utils/camera.js";
 import { Controls } from "./Controls.jsx";
 
+const MOBILE_CAMERA_MAX_WIDTH = 767;
+const MOBILE_CAMERA_MAX_ASPECT = 0.9;
+
+function selectResponsiveSourceCamera(previewScene, size) {
+  const isMobileViewport = size.width <= MOBILE_CAMERA_MAX_WIDTH
+    || size.width / Math.max(size.height, 1) <= MOBILE_CAMERA_MAX_ASPECT;
+
+  if (isMobileViewport) {
+    return previewScene.sourceCameras.mobile
+      ?? previewScene.sourceCameras.desktop
+      ?? previewScene.sourceCamera;
+  }
+
+  return previewScene.sourceCameras.desktop
+    ?? previewScene.sourceCameras.mobile
+    ?? previewScene.sourceCamera;
+}
+
 export function Model({
   orbitEnabled,
   modelUrl,
@@ -20,27 +38,37 @@ export function Model({
   animationProgress,
   cameraParallaxAmount,
   onStats,
+  onReady,
 }) {
   const gltf = useLoader(GLTFLoader, modelUrl);
   const groupRef = useRef();
   const boundsRef = useRef(new THREE.Vector3());
-  const { camera, gl } = useThree();
+  const { camera, gl, size } = useThree();
   const heatBoundsRef = useRef(createHeatBounds());
   const targetPointerRef = useRef(new THREE.Vector2());
   const smoothedPointerRef = useRef(new THREE.Vector2());
+  const isReadyRef = useRef(false);
+  const readyRafRef = useRef(null);
 
   const previewScene = useMemo(() => preparePreviewScene(gltf), [gltf]);
   const { scene, stats } = previewScene;
+  const sourceCamera = selectResponsiveSourceCamera(previewScene, size);
 
   useEffect(() => {
     onStats(stats);
   }, [onStats, stats]);
 
+  useEffect(() => () => {
+    if (readyRafRef.current !== null) {
+      window.cancelAnimationFrame(readyRafRef.current);
+    }
+  }, []);
+
   useEffect(() => {
     if (!groupRef.current) return;
-    if (previewScene.sourceCamera) return;
+    if (sourceCamera) return;
     fitCameraToObject(camera, groupRef.current, boundsRef);
-  }, [camera, previewScene.sourceCamera, scene]);
+  }, [camera, scene, sourceCamera]);
 
   useEffect(() => {
     const updatePointer = (event) => {
@@ -74,7 +102,7 @@ export function Model({
       orbitEnabled,
       pointer: smoothedPointerRef.current,
       parallaxAmount: cameraParallaxAmount,
-      sourceCamera: previewScene.sourceCamera,
+      sourceCamera,
     });
     updatePreviewFrame({
       camera,
@@ -88,6 +116,17 @@ export function Model({
       materials: previewScene.materials,
       thermalSettings,
     });
+
+    if (!isReadyRef.current) {
+      isReadyRef.current = true;
+      readyRafRef.current = window.requestAnimationFrame(() => {
+        onReady?.({
+          canvas: gl.domElement,
+          modelUrl,
+          stats,
+        });
+      });
+    }
   });
 
   return (

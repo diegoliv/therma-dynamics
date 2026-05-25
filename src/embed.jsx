@@ -16,7 +16,8 @@ function EmbedApp({
   config,
   modelUrl,
   onPerformanceUpdate,
-  onReady,
+  onTimelineReady,
+  onWebGLReady,
   performanceOverlay,
   renderSettings,
 }) {
@@ -30,11 +31,11 @@ function EmbedApp({
   const props = stateToProps(state);
 
   useEffect(() => {
-    onReady?.({
+    onTimelineReady?.({
       durationSeconds,
       setTime: (time) => setTimelineTime(Math.max(0, Math.min(time, durationSeconds))),
     });
-  }, [durationSeconds, onReady]);
+  }, [durationSeconds, onTimelineReady]);
 
   return (
     <Viewer
@@ -52,6 +53,10 @@ function EmbedApp({
       performanceOverlay={performanceOverlay}
       renderSettings={renderSettings}
       onPerformanceUpdate={onPerformanceUpdate}
+      onReady={(detail) => onWebGLReady?.({
+        ...detail,
+        durationSeconds,
+      })}
       onStats={() => {}}
     />
   );
@@ -213,7 +218,7 @@ export function mount(options = {}) {
               detail: stats,
             }));
           }}
-          onReady={({ durationSeconds, setTime: setTimelineTime }) => {
+          onTimelineReady={({ durationSeconds, setTime: setTimelineTime }) => {
             setTime = setTimelineTime;
             if (pendingTime !== null) {
               setTime(pendingTime);
@@ -225,6 +230,18 @@ export function mount(options = {}) {
               setTime,
               durationSeconds,
             });
+          }}
+          onWebGLReady={({ canvas, durationSeconds, modelUrl: readyModelUrl, stats }) => {
+            const detail = {
+              canvas,
+              durationSeconds,
+              modelUrl: readyModelUrl,
+              stats,
+            };
+            options.onReady?.(detail);
+            window.dispatchEvent(new CustomEvent("therma-dynamics:ready", {
+              detail,
+            }));
           }}
         />,
       );

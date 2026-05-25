@@ -85,10 +85,19 @@ window.addEventListener("therma-dynamics:performance", (event) => {
 You can also append `?thermaPerf=1` to the page URL to show the overlay without
 changing the mount call.
 
+For a custom Webflow loader, listen for `therma-dynamics:ready`. It fires once
+the GLB has loaded and the WebGL scene has reached its first rendered frame.
+
+```js
+window.addEventListener("therma-dynamics:ready", (event) => {
+  console.log(event.detail.modelUrl, event.detail.stats);
+});
+```
+
 ## How it works
 
-- `src/main.jsx` contains the R3F scene, GLB loading, OrbitControls, GSAP/Lenis scroll progress, and custom GLSL shaders.
-- `public/models/therma_dynamics.glb` is loaded as the scene source.
+- `src/scene` contains the R3F scene, GLB loading, OrbitControls, and WebGL readiness event.
+- `public/models/therma_dynamics_v2.glb` is loaded as the scene source.
 - Meshes using the material named `thermal` receive the shader material.
 - The object named `heat` from the GLB is hidden and used as the invisible heat driver. Its GLB animation controls the source of heat.
 - All GLB animation clips are played through one scrubbed mixer timeline, driven from 0% to 100% by page scroll.
