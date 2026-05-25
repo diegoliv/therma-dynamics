@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { cloneValue, deepMerge } from "./experienceState.js";
+import { resolveTimelineDuration } from "./timelineDuration.js";
 
 const colorA = new THREE.Color();
 const colorB = new THREE.Color();
@@ -39,7 +40,7 @@ function interpolateValue(fromValue, toValue, amount) {
 }
 
 export function resolveTimelineState(config, timelineTime) {
-  const durationSeconds = Math.max(config.durationSeconds ?? 1, 0.0001);
+  const durationSeconds = Math.max(resolveTimelineDuration(config), 0.0001);
   const clampedTime = THREE.MathUtils.clamp(timelineTime, 0, durationSeconds);
   const keyframes = normalizeKeyframes(config.keyframes, durationSeconds);
 

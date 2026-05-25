@@ -8,15 +8,16 @@ import {
 } from "../app/config.js";
 import { createDefaultExperienceState, deepMerge } from "./experienceState.js";
 import { createDefaultScrollSections } from "./scrollSections.js";
+import { AUTO_TIMELINE_DURATION, FALLBACK_TIMELINE_DURATION_SECONDS } from "./timelineDuration.js";
 
-export const DEFAULT_TIMELINE_DURATION_SECONDS = 9;
+export const DEFAULT_TIMELINE_DURATION_SECONDS = FALLBACK_TIMELINE_DURATION_SECONDS;
 export const DEFAULT_SCROLL_SECTION_COUNT = 9;
 
 export function createDefaultTimelineConfig() {
   return {
     schemaVersion: 1,
     name: "therma-dynamics-webflow-v1",
-    durationSeconds: DEFAULT_TIMELINE_DURATION_SECONDS,
+    durationSeconds: AUTO_TIMELINE_DURATION,
     source: {
       modelUrl: MODEL_URL,
     },

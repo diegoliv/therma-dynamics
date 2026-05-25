@@ -30,6 +30,7 @@ import {
   normalizeScrollSections,
   timelineTimeForSectionProgress,
 } from "./timeline/scrollSections.js";
+import { resolveTimelineDuration } from "./timeline/timelineDuration.js";
 
 function downloadJson(filename, data) {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -49,7 +50,7 @@ function downloadJson(filename, data) {
 const TIMELINE_ENDPOINT_EPSILON = 0.0005;
 
 function keyframeIdForTimelineTime(config, timelineTime) {
-  const durationSeconds = Math.max(config.durationSeconds ?? 1, 0.0001);
+  const durationSeconds = Math.max(resolveTimelineDuration(config), 0.0001);
   if (Math.abs(timelineTime) <= TIMELINE_ENDPOINT_EPSILON) return "start";
   if (Math.abs(timelineTime - durationSeconds) <= TIMELINE_ENDPOINT_EPSILON) return "end";
 
@@ -61,7 +62,7 @@ function keyframeIdForTimelineTime(config, timelineTime) {
 
 function keyframeTimeForId(config, keyframeId, timelineTime) {
   if (keyframeId === "start") return 0;
-  if (keyframeId === "end") return config.durationSeconds;
+  if (keyframeId === "end") return resolveTimelineDuration(config);
   return Number(timelineTime.toFixed(3));
 }
 
@@ -70,7 +71,7 @@ function sortKeyframes(keyframes) {
 }
 
 function syncEndToLastTimelineState(config) {
-  const durationSeconds = Math.max(config.durationSeconds ?? 1, 0.0001);
+  const durationSeconds = Math.max(resolveTimelineDuration(config), 0.0001);
   const sortedKeyframes = sortKeyframes(config.keyframes);
   const lastAuthoredState = [...sortedKeyframes]
     .reverse()
@@ -131,7 +132,11 @@ function App() {
   const [glassSettings, setGlassSettings] = useState(createDefaultGlassSettings);
   const [floorSettings, setFloorSettings] = useState(createDefaultFloorSettings);
   const [globalOpacitySettings, setGlobalOpacitySettings] = useState(createDefaultGlobalOpacitySettings);
-  const durationSeconds = timelineConfig.durationSeconds;
+  const durationSeconds = resolveTimelineDuration(timelineConfig, stats?.animationDuration);
+  const effectiveTimelineConfig = useMemo(
+    () => ({ ...timelineConfig, durationSeconds }),
+    [durationSeconds, timelineConfig],
+  );
   const animationProgress = durationSeconds > 0 ? timelineTime / durationSeconds : 0;
 
   const currentExperienceState = useMemo(() => createExperienceState({
@@ -164,8 +169,8 @@ function App() {
   }, []);
 
   useEffect(() => {
-    applyExperienceState(resolveTimelineState(timelineConfig, timelineTime));
-  }, [applyExperienceState, timelineConfig, timelineTime]);
+    applyExperienceState(resolveTimelineState(effectiveTimelineConfig, timelineTime));
+  }, [applyExperienceState, effectiveTimelineConfig, timelineTime]);
 
   useEffect(() => {
     window.__THERMA_TEST_SET_TIME = (time) => {
@@ -244,41 +249,43 @@ function App() {
 
   const captureTimelineState = useCallback(() => {
     const state = cloneValue(currentExperienceState);
-    const selectedId = keyframeIdForTimelineTime(timelineConfig, timelineTime);
+    const selectedId = keyframeIdForTimelineTime(effectiveTimelineConfig, timelineTime);
 
     setTimelineConfig((config) => {
-      const keyframeId = keyframeIdForTimelineTime(config, timelineTime);
+      const scopedConfig = { ...config, durationSeconds };
+      const keyframeId = keyframeIdForTimelineTime(scopedConfig, timelineTime);
       const nextConfig = upsertTimelineKeyframe(config, {
         id: keyframeId,
-        time: keyframeTimeForId(config, keyframeId, timelineTime),
+        time: keyframeTimeForId(scopedConfig, keyframeId, timelineTime),
         easeToNext: "power1.inOut",
         state,
       });
 
-      return keyframeId === "end" ? nextConfig : syncEndToLastTimelineState(nextConfig);
+      return keyframeId === "end" ? nextConfig : syncEndToLastTimelineState({ ...nextConfig, durationSeconds });
     });
     setSelectedKeyframeId(selectedId);
-  }, [currentExperienceState, timelineConfig, timelineTime]);
+  }, [currentExperienceState, durationSeconds, effectiveTimelineConfig, timelineTime]);
 
   const updateTimelineState = useCallback(() => {
     if (!selectedKeyframeId) return;
     const state = cloneValue(currentExperienceState);
-    const idAtCurrentTime = keyframeIdForTimelineTime(timelineConfig, timelineTime);
+    const idAtCurrentTime = keyframeIdForTimelineTime(effectiveTimelineConfig, timelineTime);
     const id = idAtCurrentTime === "start" || idAtCurrentTime === "end"
       ? idAtCurrentTime
       : selectedKeyframeId;
     setTimelineConfig((config) => {
+      const scopedConfig = { ...config, durationSeconds };
       const nextConfig = upsertTimelineKeyframe(config, {
         id,
-        time: keyframeTimeForId(config, id, timelineTime),
+        time: keyframeTimeForId(scopedConfig, id, timelineTime),
         easeToNext: "power1.inOut",
         state,
       });
 
-      return id === "end" ? nextConfig : syncEndToLastTimelineState(nextConfig);
+      return id === "end" ? nextConfig : syncEndToLastTimelineState({ ...nextConfig, durationSeconds });
     });
     setSelectedKeyframeId(id);
-  }, [currentExperienceState, selectedKeyframeId, timelineConfig, timelineTime]);
+  }, [currentExperienceState, durationSeconds, effectiveTimelineConfig, selectedKeyframeId, timelineTime]);
 
   const deleteTimelineState = useCallback(() => {
     if (!selectedKeyframeId || selectedKeyframeId === "start" || selectedKeyframeId === "end") return;
@@ -378,7 +385,7 @@ function App() {
         setGlobalOpacitySettings={setGlobalOpacitySettings}
         timelineTime={timelineTime}
         setTimelineTime={setTimelineTime}
-        timelineConfig={timelineConfig}
+        timelineConfig={effectiveTimelineConfig}
         selectedKeyframeId={selectedKeyframeId}
         setSelectedKeyframeId={setSelectedKeyframeId}
         scrollSimulationEnabled={scrollSimulationEnabled}

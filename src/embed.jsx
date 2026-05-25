@@ -9,6 +9,7 @@ import {
   normalizeScrollSections,
   timelineTimeForSectionProgress,
 } from "./timeline/scrollSections.js";
+import { isAutoTimelineDuration, resolveTimelineDuration } from "./timeline/timelineDuration.js";
 
 const EMBED_VERSION = "2026-05-22.1";
 
@@ -22,20 +23,26 @@ function EmbedApp({
   renderSettings,
 }) {
   const [timelineTime, setTimelineTime] = useState(0);
-  const durationSeconds = Math.max(config.durationSeconds ?? 1, 0.0001);
+  const [modelStats, setModelStats] = useState(null);
+  const durationSeconds = resolveTimelineDuration(config, modelStats?.animationDuration);
+  const timelineConfig = useMemo(
+    () => ({ ...config, durationSeconds }),
+    [config, durationSeconds],
+  );
   const animationProgress = timelineTime / durationSeconds;
   const state = useMemo(
-    () => resolveTimelineState(config, timelineTime),
-    [config, timelineTime],
+    () => resolveTimelineState(timelineConfig, timelineTime),
+    [timelineConfig, timelineTime],
   );
   const props = stateToProps(state);
 
   useEffect(() => {
+    if (isAutoTimelineDuration(config.durationSeconds) && !modelStats?.animationDuration) return;
     onTimelineReady?.({
       durationSeconds,
       setTime: (time) => setTimelineTime(Math.max(0, Math.min(time, durationSeconds))),
     });
-  }, [durationSeconds, onTimelineReady]);
+  }, [config.durationSeconds, durationSeconds, modelStats, onTimelineReady]);
 
   return (
     <Viewer
@@ -59,7 +66,7 @@ function EmbedApp({
         ...detail,
         durationSeconds,
       })}
-      onStats={() => {}}
+      onStats={setModelStats}
     />
   );
 }
@@ -81,8 +88,25 @@ function resolveAssetUrl(url, publicPath) {
 
 function getSectionElements(scrollConfig, durationSeconds) {
   const sectionSelector = scrollConfig.sectionSelector || ".therma-scroll-section";
+  const annotatedSections = Array.from(document.querySelectorAll("[data-therma-from][data-therma-to]"));
   const domSections = Array.from(document.querySelectorAll(sectionSelector));
   const configSections = normalizeScrollSections(scrollConfig.sections, durationSeconds);
+
+  if (annotatedSections.length) {
+    return annotatedSections
+      .map((element) => {
+        const from = element.dataset.thermaFrom;
+        const to = element.dataset.thermaTo;
+        return {
+          element,
+          start: element.dataset.thermaStart,
+          end: element.dataset.thermaEnd,
+          from: clampTime(from, durationSeconds),
+          to: clampTime(to, durationSeconds),
+        };
+      })
+      .filter((section) => section.from !== section.to);
+  }
 
   if (domSections.length) {
     return domSections.map((element, index) => {
@@ -226,6 +250,7 @@ export function mount(options = {}) {
               setTime(pendingTime);
               pendingTime = null;
             }
+            scrollTrigger?.kill?.();
             scrollTrigger = setupScrollTrigger({
               config,
               options,

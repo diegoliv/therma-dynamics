@@ -1,13 +1,13 @@
 {
   "schemaVersion": 1,
   "name": "therma-dynamics-webflow-v1",
-  "durationSeconds": 9,
+  "durationSeconds": "auto",
   "source": {
     "modelUrl": "/models/therma_dynamics_v2.glb"
   },
   "camera": {
     "desktopFov": 20.86169239656837,
-    "mobileFov": 20.86169239656837,
+    "mobileFov": 50,
     "parallaxAmount": 0.005
   },
   "scroll": {
@@ -554,7 +554,7 @@
     },
     {
       "id": "end",
-      "time": 9,
+      "time": 10,
       "easeToNext": "power1.inOut",
       "state": {
         "backgroundColor": "#080b0f",

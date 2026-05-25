@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "therma-dynamics-webflow-v1",
-  "durationSeconds": 9,
+  "durationSeconds": "auto",
   "source": {
     "modelUrl": "/models/therma_dynamics_v2.glb"
   },
@@ -41,7 +41,7 @@
         "id": "final",
         "heightVh": 200,
         "from": 6,
-        "to": 9
+        "to": 10
       }
     ],
     "sectionCount": 9
@@ -583,8 +583,62 @@
       }
     },
     {
-      "id": "end",
+      "id": "state-9-000",
       "time": 9,
+      "easeToNext": "power1.inOut",
+      "state": {
+        "backgroundColor": "#080b0f",
+        "dof": {
+          "enabled": false,
+          "focus": 40,
+          "aperture": 0.018,
+          "maxblur": 0.011999999999999999
+        },
+        "thermal": {
+          "gradientSoftness": 1.1999999999999997,
+          "radius": 1.35,
+          "contrast": 0.7,
+          "noise": 0.09499999999999999,
+          "hotEdge": 0,
+          "radiance": 0.17,
+          "heatFalloff": 5,
+          "heatColors": [
+            "#00105c",
+            "#00d8ff",
+            "#a7ff00",
+            "#ff1600"
+          ],
+          "coldColors": [
+            "#000000",
+            "#00084c",
+            "#0026b8",
+            "#00a8ff"
+          ]
+        },
+        "cooling": {
+          "visibility": 1,
+          "color": "#65d7ff",
+          "roughness": 0.16
+        },
+        "glass": {
+          "opacity": 0.05999999999999999,
+          "color": "#c8f8ff"
+        },
+        "floor": {
+          "dotSize": 0.025,
+          "dotSpacing": 1.5,
+          "dotOpacity": 0.2
+        },
+        "globalOpacity": {
+          "outsideRack": 1,
+          "rackWithoutGpu": 1,
+          "maskSoftness": 0.14
+        }
+      }
+    },
+    {
+      "id": "end",
+      "time": 10,
       "easeToNext": "power1.inOut",
       "state": {
         "backgroundColor": "#080b0f",
