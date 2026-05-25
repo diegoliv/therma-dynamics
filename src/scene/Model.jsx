@@ -13,8 +13,10 @@ const MOBILE_CAMERA_MAX_WIDTH = 767;
 const MOBILE_CAMERA_MAX_ASPECT = 0.9;
 
 function selectResponsiveSourceCamera(previewScene, size) {
-  const isMobileViewport = size.width <= MOBILE_CAMERA_MAX_WIDTH
-    || size.width / Math.max(size.height, 1) <= MOBILE_CAMERA_MAX_ASPECT;
+  const aspect = size.width / Math.max(size.height, 1);
+  const isPortraitViewport = aspect < 1;
+  const isMobileViewport = isPortraitViewport
+    && (size.width <= MOBILE_CAMERA_MAX_WIDTH || aspect <= MOBILE_CAMERA_MAX_ASPECT);
 
   if (isMobileViewport) {
     return previewScene.sourceCameras.mobile
