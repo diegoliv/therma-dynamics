@@ -1,5 +1,7 @@
 import {
   DEFAULT_CAMERA_PARALLAX_AMOUNT,
+  DEFAULT_DESKTOP_CAMERA_FOV,
+  DEFAULT_MOBILE_CAMERA_FOV,
   DEFAULT_RENDER_MAX_DPR,
   DEFAULT_RENDER_MIN_DPR,
   MODEL_URL,
@@ -19,6 +21,8 @@ export function createDefaultTimelineConfig() {
       modelUrl: MODEL_URL,
     },
     camera: {
+      desktopFov: DEFAULT_DESKTOP_CAMERA_FOV,
+      mobileFov: DEFAULT_MOBILE_CAMERA_FOV,
       parallaxAmount: DEFAULT_CAMERA_PARALLAX_AMOUNT,
     },
     render: {

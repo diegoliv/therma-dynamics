@@ -6,7 +6,13 @@
     "modelUrl": "/models/therma_dynamics_v2.glb"
   },
   "camera": {
+    "desktopFov": 20.86169239656837,
+    "mobileFov": 50,
     "parallaxAmount": 0.005
+  },
+  "render": {
+    "minDpr": 1,
+    "maxDpr": 1.5
   },
   "scroll": {
     "scrub": true,

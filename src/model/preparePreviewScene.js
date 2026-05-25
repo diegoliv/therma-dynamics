@@ -4,13 +4,6 @@ import { createAnimationTimeline } from "./animationTimeline.js";
 import { optimizeRepeatedMeshes } from "./optimizeRepeatedMeshes.js";
 import { collectSceneStats } from "./sceneStats.js";
 
-function resolveCameraKey(camera) {
-  const normalizedName = camera.name?.trim().toLowerCase();
-  if (normalizedName === "camera.desktop") return "desktop";
-  if (normalizedName === "camera.mobile") return "mobile";
-  return null;
-}
-
 export function preparePreviewScene(gltf) {
   const scene = gltf.scene.clone(true);
   const sceneStats = collectSceneStats(gltf);
@@ -18,15 +11,9 @@ export function preparePreviewScene(gltf) {
   const previewMaterials = createDebugPreviewMaterials();
   let heatObject = null;
   let sourceCamera = null;
-  const sourceCameras = {
-    desktop: null,
-    mobile: null,
-  };
 
   scene.traverse((node) => {
     if (node.isCamera) {
-      const cameraKey = resolveCameraKey(node);
-      if (cameraKey) sourceCameras[cameraKey] = node;
       if (!sourceCamera) sourceCamera = node;
     }
 
@@ -53,14 +40,15 @@ export function preparePreviewScene(gltf) {
   });
 
   const instancingStats = optimizeRepeatedMeshes(scene, materials);
-  const timeline = createAnimationTimeline(scene, gltf.animations);
+  const timeline = createAnimationTimeline(scene, gltf.animations, {
+    primary: sourceCamera,
+  });
 
   return {
     heatObject,
     materials,
     scene,
     sourceCamera,
-    sourceCameras,
     stats: { ...sceneStats, animationDuration: timeline.duration, instancing: instancingStats },
     timeline,
   };

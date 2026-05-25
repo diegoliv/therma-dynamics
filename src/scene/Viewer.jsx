@@ -1,5 +1,5 @@
 import { Suspense, useEffect, useRef, useState } from "react";
-import { createRoot, extend } from "@react-three/fiber";
+import { _roots, createRoot, extend } from "@react-three/fiber";
 import * as THREE from "three";
 import { DEFAULT_GLOBAL_LIGHT_SETTINGS, MODEL_URL } from "../app/config.js";
 import { BokehDepthOfField } from "./BokehDepthOfField.jsx";
@@ -49,6 +49,8 @@ function SceneContent({
   floorSettings,
   globalOpacitySettings,
   animationProgress,
+  animationTimeSeconds,
+  cameraSettings,
   cameraParallaxAmount,
   modelUrl = MODEL_URL,
   performanceMonitoring,
@@ -81,6 +83,8 @@ function SceneContent({
           floorSettings={floorSettings}
           globalOpacitySettings={globalOpacitySettings}
           animationProgress={animationProgress}
+          animationTimeSeconds={animationTimeSeconds}
+          cameraSettings={cameraSettings}
           cameraParallaxAmount={cameraParallaxAmount}
           onStats={onStats}
           onReady={onReady}
@@ -101,6 +105,32 @@ function normalizeDprRange(renderSettings) {
   return [min, max];
 }
 
+function measureElement(element) {
+  const rect = element.getBoundingClientRect();
+  return {
+    height: Math.max(1, Math.min(rect.height, window.innerHeight)),
+    left: rect.left,
+    top: rect.top,
+    width: Math.max(1, Math.min(rect.width, window.innerWidth)),
+  };
+}
+
+function waitForReleasedCanvas(canvas) {
+  if (!_roots.get(canvas)) return Promise.resolve();
+
+  return new Promise((resolve) => {
+    const checkRelease = () => {
+      if (!_roots.get(canvas)) {
+        resolve();
+        return;
+      }
+      window.setTimeout(checkRelease, 50);
+    };
+
+    checkRelease();
+  });
+}
+
 export function Viewer({
   performanceOverlay = false,
   preserveDrawingBuffer = false,
@@ -109,6 +139,7 @@ export function Viewer({
   onReady,
   ...props
 }) {
+  const canvasShellRef = useRef(null);
   const canvasRef = useRef(null);
   const rootRef = useRef(null);
   const [isConfigured, setIsConfigured] = useState(false);
@@ -116,26 +147,44 @@ export function Viewer({
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return undefined;
+    const canvasShell = canvasShellRef.current;
+    if (!canvas || !canvasShell) return undefined;
 
+    let root = null;
     let isDisposed = false;
-    const root = createRoot(canvas);
-    root
-      .configure({
+    const configureSize = () => {
+      if (isDisposed || !root) return;
+      root.configure({ size: measureElement(canvasShell) });
+    };
+    const resizeObserver = new ResizeObserver(configureSize);
+
+    async function setupRoot() {
+      await waitForReleasedCanvas(canvas);
+      if (isDisposed) return;
+
+      root = createRoot(canvas);
+      await root.configure({
         camera: { position: [2, 1.2, 4], fov: 38 },
         dpr: normalizeDprRange(renderSettings),
         gl: { antialias: true, alpha: true, preserveDrawingBuffer },
+        size: measureElement(canvasShell),
         shadows: true,
-      })
-      .then(() => {
-        if (isDisposed) return;
-        rootRef.current = root;
-        setIsConfigured(true);
       });
+
+      if (isDisposed) return;
+      rootRef.current = root;
+      resizeObserver.observe(canvasShell);
+      window.addEventListener("resize", configureSize);
+      setIsConfigured(true);
+    }
+
+    setupRoot();
 
     return () => {
       isDisposed = true;
-      root.unmount();
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", configureSize);
+      root?.unmount();
       rootRef.current = null;
     };
   }, []);
@@ -159,10 +208,12 @@ export function Viewer({
 
   return (
     <>
-      <canvas
-        ref={canvasRef}
-        className="therma-canvas"
-      />
+      <div ref={canvasShellRef} className="therma-canvas-shell">
+        <canvas
+          ref={canvasRef}
+          className="therma-canvas"
+        />
+      </div>
       {performanceOverlay && performanceStats && (
         <div className="therma-performance-overlay" style={PERFORMANCE_OVERLAY_STYLE}>
           <strong style={PERFORMANCE_OVERLAY_TITLE_STYLE}>{performanceStats.fps.toFixed(0)} FPS</strong>

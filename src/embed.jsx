@@ -48,8 +48,10 @@ function EmbedApp({
       glassSettings={props.glassSettings}
       floorSettings={props.floorSettings}
       globalOpacitySettings={props.globalOpacitySettings}
+      cameraSettings={config.camera}
       cameraParallaxAmount={config.camera?.parallaxAmount}
       animationProgress={animationProgress}
+      animationTimeSeconds={timelineTime}
       performanceOverlay={performanceOverlay}
       renderSettings={renderSettings}
       onPerformanceUpdate={onPerformanceUpdate}

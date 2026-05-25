@@ -34,6 +34,7 @@ export function Controls({ target, enabled }) {
 
   useFrame(() => {
     if (!controlsRef.current) return;
+    if (!enabled) return;
     if (!hasInitializedTargetRef.current) {
       controlsRef.current.target.copy(target.current);
       hasInitializedTargetRef.current = true;

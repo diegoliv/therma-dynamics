@@ -16,7 +16,9 @@ const sourceScale = new THREE.Vector3();
 const yawQuaternion = new THREE.Quaternion();
 
 export function updateSourceCamera({
+  aspect,
   camera,
+  fovOverride,
   orbitEnabled,
   pointer,
   parallaxAmount = DEFAULT_CAMERA_PARALLAX_AMOUNT,
@@ -45,8 +47,17 @@ export function updateSourceCamera({
     camera.lookAt(focalPoint);
   }
 
-  camera.fov = sourceCamera.fov;
+  const targetAspect = aspect || camera.aspect;
+
+  camera.fov = Number.isFinite(fovOverride) ? fovOverride : sourceCamera.fov;
+  if (targetAspect) camera.aspect = targetAspect;
   camera.near = DEFAULT_CAMERA_NEAR;
   camera.far = DEFAULT_CAMERA_FAR;
   camera.updateProjectionMatrix();
+
+  return {
+    fovOverride: Number.isFinite(fovOverride) ? fovOverride : null,
+    sourceFov: sourceCamera.fov,
+    targetAspect,
+  };
 }

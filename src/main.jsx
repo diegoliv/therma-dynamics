@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
-import { DEFAULT_CAMERA_PARALLAX_AMOUNT, SHOW_INSPECTOR_PANEL } from "./app/config.js";
+import {
+  DEFAULT_CAMERA_PARALLAX_AMOUNT,
+  DEFAULT_DESKTOP_CAMERA_FOV,
+  DEFAULT_MOBILE_CAMERA_FOV,
+  SHOW_INSPECTOR_PANEL,
+} from "./app/config.js";
 import {
   DEFAULT_BACKGROUND_COLOR,
   DEFAULT_DOF_SETTINGS,
@@ -113,6 +118,12 @@ function App() {
   const [cameraParallaxAmount, setCameraParallaxAmount] = useState(
     initialTimelineConfig.camera?.parallaxAmount ?? DEFAULT_CAMERA_PARALLAX_AMOUNT,
   );
+  const [desktopCameraFov, setDesktopCameraFov] = useState(
+    initialTimelineConfig.camera?.desktopFov ?? DEFAULT_DESKTOP_CAMERA_FOV,
+  );
+  const [mobileCameraFov, setMobileCameraFov] = useState(
+    initialTimelineConfig.camera?.mobileFov ?? DEFAULT_MOBILE_CAMERA_FOV,
+  );
   const [backgroundColor, setBackgroundColor] = useState(DEFAULT_BACKGROUND_COLOR);
   const [dofSettings, setDofSettings] = useState(DEFAULT_DOF_SETTINGS);
   const [thermalSettings, setThermalSettings] = useState(createDefaultThermalSettings);
@@ -155,6 +166,15 @@ function App() {
   useEffect(() => {
     applyExperienceState(resolveTimelineState(timelineConfig, timelineTime));
   }, [applyExperienceState, timelineConfig, timelineTime]);
+
+  useEffect(() => {
+    window.__THERMA_TEST_SET_TIME = (time) => {
+      setTimelineTime(Math.max(0, Math.min(Number(time) || 0, durationSeconds)));
+    };
+    return () => {
+      delete window.__THERMA_TEST_SET_TIME;
+    };
+  }, [durationSeconds]);
 
   useEffect(() => {
     document.body.style.backgroundColor = backgroundColor;
@@ -274,12 +294,14 @@ function App() {
       ...timelineConfig,
       camera: {
         ...(timelineConfig.camera ?? {}),
+        desktopFov: desktopCameraFov,
+        mobileFov: mobileCameraFov,
         parallaxAmount: cameraParallaxAmount,
       },
     };
     downloadJson("therma-dynamics-timeline.json", exportedConfig);
     window.THERMADYNAMICS_TIMELINE_STATE = exportedConfig;
-  }, [cameraParallaxAmount, timelineConfig]);
+  }, [cameraParallaxAmount, desktopCameraFov, mobileCameraFov, timelineConfig]);
 
   const importTimelineConfig = useCallback(() => {
     const input = document.createElement("input");
@@ -291,6 +313,8 @@ function App() {
       const importedConfig = normalizeTimelineConfig(JSON.parse(await file.text()));
       setTimelineConfig(importedConfig);
       setCameraParallaxAmount(importedConfig.camera?.parallaxAmount ?? DEFAULT_CAMERA_PARALLAX_AMOUNT);
+      setDesktopCameraFov(importedConfig.camera?.desktopFov ?? DEFAULT_DESKTOP_CAMERA_FOV);
+      setMobileCameraFov(importedConfig.camera?.mobileFov ?? DEFAULT_MOBILE_CAMERA_FOV);
       setTimelineTime(0);
       setSelectedKeyframeId(importedConfig.keyframes?.[0]?.id ?? null);
     }, { once: true });
@@ -309,8 +333,14 @@ function App() {
           glassSettings={glassSettings}
           floorSettings={floorSettings}
           globalOpacitySettings={globalOpacitySettings}
+          cameraSettings={{
+            ...(timelineConfig.camera ?? {}),
+            desktopFov: desktopCameraFov,
+            mobileFov: mobileCameraFov,
+          }}
           cameraParallaxAmount={cameraParallaxAmount}
           animationProgress={animationProgress}
+          animationTimeSeconds={timelineTime}
           performanceOverlay={performanceOverlayEnabled}
           preserveDrawingBuffer
           renderSettings={timelineConfig.render}
@@ -357,6 +387,10 @@ function App() {
         setPerformanceOverlayEnabled={setPerformanceOverlayEnabled}
         cameraParallaxAmount={cameraParallaxAmount}
         setCameraParallaxAmount={setCameraParallaxAmount}
+        desktopCameraFov={desktopCameraFov}
+        setDesktopCameraFov={setDesktopCameraFov}
+        mobileCameraFov={mobileCameraFov}
+        setMobileCameraFov={setMobileCameraFov}
         captureTimelineState={captureTimelineState}
         updateTimelineState={updateTimelineState}
         deleteTimelineState={deleteTimelineState}

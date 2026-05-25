@@ -29,6 +29,10 @@ export function GuiControls({
   setPerformanceOverlayEnabled,
   cameraParallaxAmount,
   setCameraParallaxAmount,
+  desktopCameraFov,
+  setDesktopCameraFov,
+  mobileCameraFov,
+  setMobileCameraFov,
   captureTimelineState,
   updateTimelineState,
   deleteTimelineState,
@@ -98,6 +102,8 @@ export function GuiControls({
       scrollSimulationEnabled,
       performanceOverlayEnabled,
       cameraParallaxAmount,
+      desktopCameraFov,
+      mobileCameraFov,
       selectedKeyframeId: selectedKeyframeId || "",
       captureTimelineState,
       updateTimelineState,
@@ -258,6 +264,14 @@ export function GuiControls({
         .add(controls, "cameraParallaxAmount", 0, 0.24, 0.001)
         .name("Camera parallax")
         .onChange(setCameraParallaxAmount);
+      animationFolder
+        .add(controls, "desktopCameraFov", 5, 80, 0.01)
+        .name("Desktop FOV")
+        .onChange(setDesktopCameraFov);
+      animationFolder
+        .add(controls, "mobileCameraFov", 5, 80, 0.01)
+        .name("Mobile FOV")
+        .onChange(setMobileCameraFov);
       animationFolder.add(controls, "captureTimelineState").name("Capture current state");
       animationFolder.add(controls, "updateTimelineState").name("Update selected state");
       animationFolder.add(controls, "deleteTimelineState").name("Delete selected state");
@@ -329,6 +343,8 @@ export function GuiControls({
     controls.scrollSimulationEnabled = scrollSimulationEnabled;
     controls.performanceOverlayEnabled = performanceOverlayEnabled;
     controls.cameraParallaxAmount = cameraParallaxAmount;
+    controls.desktopCameraFov = desktopCameraFov;
+    controls.mobileCameraFov = mobileCameraFov;
     controls.selectedKeyframeId = selectedKeyframeId || "";
     controls.captureTimelineState = captureTimelineState;
     controls.updateTimelineState = updateTimelineState;
@@ -340,14 +356,18 @@ export function GuiControls({
     backgroundColor,
     cameraParallaxAmount,
     coolingSettings,
+    desktopCameraFov,
     dofSettings,
     floorSettings,
     glassSettings,
     globalOpacitySettings,
+    mobileCameraFov,
     orbitEnabled,
     performanceOverlayEnabled,
     scrollSimulationEnabled,
     setCameraParallaxAmount,
+    setDesktopCameraFov,
+    setMobileCameraFov,
     setPerformanceOverlayEnabled,
     selectedKeyframeId,
     thermalSettings,
