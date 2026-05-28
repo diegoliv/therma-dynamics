@@ -8,6 +8,7 @@ import {
   isFloorMaterial,
   isGlassMaterial,
   isHeatObject,
+  isScreenMaterial,
   isThermalMaterial,
   sourceByName,
 } from "../model/classifyNode.js";
@@ -53,7 +54,7 @@ function withCollectionNames(material, collections) {
 
 export function createPreviewMaterialForNode(node) {
   const originalMaterial = node.material;
-  const opacityBucket = getOpacityBucket(node);
+  const opacityBucket = getOpacityBucket(node, originalMaterial);
 
   if (isHeatObject(node)) {
     const sourceMaterial = isThermalMaterial(originalMaterial)
@@ -121,6 +122,7 @@ export function createPreviewMaterialForNode(node) {
 
   const material = cloneOpacityMaterial(originalMaterial, opacityBucket);
   if (material) {
+    material.userData.useCoolingVisibilityMask = isScreenMaterial(originalMaterial);
     material.userData.collectionNames = ["opacity"];
   }
   return {

@@ -21,6 +21,10 @@ export function isFloorMaterial(material) {
   return materialNameIncludes(material, "floor");
 }
 
+export function isScreenMaterial(material) {
+  return materialNameIncludes(material, "screen");
+}
+
 export function isCoolingObject(node) {
   const name = node.name?.toLowerCase() ?? "";
   return name.includes("cooling_plate") || name.includes("coolant");
@@ -51,13 +55,15 @@ export function sourceByName(material, name) {
   return material;
 }
 
-export function getOpacityBucket(node) {
+export function getOpacityBucket(node, material) {
+  const shouldUseRackMaskInsideGpu = isScreenMaterial(material);
+
   let cursor = node;
   let isRackDescendant = false;
 
   while (cursor) {
     const name = cursor.name?.toLowerCase() ?? "";
-    if (/^gpu(?:\.|$)/.test(name)) return "gpu";
+    if (/^gpu(?:\.|$)/.test(name) && !shouldUseRackMaskInsideGpu) return "gpu";
     if (/^rack(?:\.|$)/.test(name)) isRackDescendant = true;
     cursor = cursor.parent;
   }

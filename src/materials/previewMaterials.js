@@ -32,10 +32,12 @@ import { colorsFromHexList, getMaterialBaseColor } from "../utils/colors.js";
 export function injectGlobalDissolve(material) {
   if (!material || material.userData.hasGlobalDissolve) return material;
   material.userData.hasGlobalDissolve = true;
+  material.userData.localVisibilityUniform = { value: 1 };
   material.userData.globalVisibilityUniform = { value: 1 };
   material.userData.globalMaskSoftnessUniform = { value: DEFAULT_GLOBAL_MASK_SOFTNESS };
   material.userData.globalDissolveTimeUniform = { value: 0 };
   material.onBeforeCompile = (shader) => {
+    shader.uniforms.uLocalVisibility = material.userData.localVisibilityUniform;
     shader.uniforms.uGlobalVisibility = material.userData.globalVisibilityUniform;
     shader.uniforms.uGlobalMaskSoftness = material.userData.globalMaskSoftnessUniform;
     shader.uniforms.uGlobalDissolveTime = material.userData.globalDissolveTimeUniform;
@@ -53,6 +55,7 @@ export function injectGlobalDissolve(material) {
         "void main() {",
         `
 varying vec3 vGlobalDissolveWorldPosition;
+uniform float uLocalVisibility;
 uniform float uGlobalVisibility;
 uniform float uGlobalMaskSoftness;
 uniform float uGlobalDissolveTime;
@@ -104,6 +107,10 @@ void main() {`,
 if (uGlobalVisibility < 0.999) {
   float globalDissolve = globalDissolveNoise(vGlobalDissolveWorldPosition * 1.12 + vec3(0.3, uGlobalDissolveTime * 0.035, 1.7));
   applyGlobalDissolveMask(uGlobalVisibility, globalDissolve, uGlobalMaskSoftness, vGlobalDissolveWorldPosition);
+}
+if (uLocalVisibility < 0.999) {
+  float localDissolve = globalDissolveNoise(vGlobalDissolveWorldPosition * 1.8 + vec3(2.7, uGlobalDissolveTime * 0.055, 0.4));
+  applyGlobalDissolveMask(uLocalVisibility, localDissolve, 0.16, vGlobalDissolveWorldPosition + vec3(2.7, 0.0, 1.1));
 }
 #include <alphatest_fragment>`,
       );

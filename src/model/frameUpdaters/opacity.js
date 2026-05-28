@@ -6,7 +6,7 @@ export function opacityMultiplierForBucket(bucket, globalOpacitySettings) {
   return 1;
 }
 
-export function updateOpacityMaterials({ delta, globalOpacitySettings, materials }) {
+export function updateOpacityMaterials({ coolingSettings, delta, globalOpacitySettings, materials }) {
   materials.forEach((material) => {
     if (material.isShaderMaterial) return;
     if (material.userData.isGlassPreview) return;
@@ -21,6 +21,11 @@ export function updateOpacityMaterials({ delta, globalOpacitySettings, materials
     material.depthWrite = true;
     if (material.userData.globalVisibilityUniform) {
       material.userData.globalVisibilityUniform.value = visibility;
+    }
+    if (material.userData.localVisibilityUniform) {
+      material.userData.localVisibilityUniform.value = material.userData.useCoolingVisibilityMask
+        ? coolingSettings.visibility
+        : 1;
     }
     if (material.userData.globalMaskSoftnessUniform) {
       material.userData.globalMaskSoftnessUniform.value = globalOpacitySettings.maskSoftness;

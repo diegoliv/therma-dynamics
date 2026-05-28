@@ -40,6 +40,7 @@ export function updatePreviewFrame({
   });
   updateGlassMaterials(materials.glass, glassSettings, globalOpacitySettings);
   updateOpacityMaterials({
+    coolingSettings,
     delta,
     globalOpacitySettings,
     materials: materials.opacity,
